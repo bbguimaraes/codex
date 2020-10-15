@@ -1,3 +1,5 @@
+SUBDIRS = base64
+
 .PHONY: docs
 docs:
 	cd '@srcdir@' && doxygen

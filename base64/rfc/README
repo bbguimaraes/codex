@@ -1,0 +1,5 @@
+Sample code in `base64.h` and `base64.c` copied from the website linked in RFC
+4648 (section 11).
+
+https://tools.ietf.org/html/rfc4648
+https://josefsson.org/base-encoding

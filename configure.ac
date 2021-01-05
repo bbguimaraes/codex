@@ -27,5 +27,5 @@ AS_IF([test "$ENABLE_TESTS" != no],
         [TEST_DEPS], [Qt5Core Qt5Test],
         [TEST_DEPS_CFLAGS=$(echo "$TEST_DEPS_CFLAGS" | sed s/-I/-isystem/g)])])
 
-AC_CONFIG_FILES([Makefile base64/Makefile])
+AC_CONFIG_FILES([Makefile base64/Makefile lambda/Makefile])
 AC_OUTPUT

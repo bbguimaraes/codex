@@ -40,3 +40,4 @@ set_target_properties(
     docs PROPERTIES ADDITIONAL_CLEAN_FILES
     "${PROJECT_SOURCE_DIR}/docs/html;${PROJECT_SOURCE_DIR}/docs/latex")
 add_subdirectory(base64)
+add_subdirectory(lambda)

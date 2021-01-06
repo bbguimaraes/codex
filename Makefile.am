@@ -1,4 +1,4 @@
-SUBDIRS = base64 lambda
+SUBDIRS = base64 bit_pattern lambda
 
 .PHONY: docs
 docs:

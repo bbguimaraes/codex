@@ -1,6 +1,7 @@
 #ifndef CODEX_TEST_COMMON_H
 #define CODEX_TEST_COMMON_H
 
+#include <string>
 #include <string_view>
 
 #include <QTest>
@@ -15,6 +16,12 @@ char *toString(string_view s) {
         QString::fromUtf8(s.data(),
         static_cast<int>(s.size())));
 }
+
+/**
+ * Adaptor function to display `string` values in test assertion messages.
+ */
+char *toString(string s)
+    { return toString(static_cast<std::string_view>(s)); }
 
 }
 

@@ -41,4 +41,5 @@ set_target_properties(
     "${PROJECT_SOURCE_DIR}/docs/html;${PROJECT_SOURCE_DIR}/docs/latex")
 add_subdirectory(base64)
 add_subdirectory(bit_pattern)
+add_subdirectory(c_wrapper)
 add_subdirectory(lambda)

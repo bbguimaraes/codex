@@ -1,5 +1,6 @@
 SUBDIRS = \
 	base64 \
+	bit_pattern \
 	lambda
 
 .PHONY: docs

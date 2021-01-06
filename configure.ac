@@ -30,5 +30,6 @@ AS_IF([test "$ENABLE_TESTS" != no],
 AC_CONFIG_FILES([
     Makefile
     base64/Makefile
+    bit_pattern/Makefile
     lambda/Makefile])
 AC_OUTPUT

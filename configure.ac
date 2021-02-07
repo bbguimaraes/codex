@@ -29,6 +29,7 @@ AS_IF([test "$ENABLE_TESTS" != no],
 
 AC_CONFIG_FILES([
     Makefile
+    arithmetic_folding/Makefile
     base64/Makefile
     bit_pattern/Makefile
     c_wrapper/Makefile

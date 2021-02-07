@@ -3,6 +3,9 @@ codex
 
 Repository for code experiments.  Mostly C/++.
 
+- [`arithmetic_folding`](./arithmetic_folding): how far will the compiler go to
+  optimize a sequence of arithmetic operations that involve constant
+  expressions?
 - [`base64`](./base64): Base64 (RFC 4648) encoder/decoder.
 - [`bit_pattern`](./bit_pattern): compile-time bit pattern matcher based on C++
   Weekly ep. 230.

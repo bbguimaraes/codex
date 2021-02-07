@@ -1,4 +1,5 @@
 SUBDIRS = \
+	arithmetic_folding \
 	base64 \
 	bit_pattern \
 	c_wrapper \

@@ -8,4 +8,5 @@ Repository for code experiments.  Mostly C/++.
   Weekly ep. 230.
 - [`c_wrapper`](./c_wrapper): wrapper for C-style `void*` + function pointer
   pairs.
+- [`event_dispatcher`](./event_dispatcher): type-safe event listener/dispatcher.
 - [`lambda`](./lambda): lambda (ab)uses.

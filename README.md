@@ -10,3 +10,4 @@ Repository for code experiments.  Mostly C/++.
   pairs.
 - [`event_dispatcher`](./event_dispatcher): type-safe event listener/dispatcher.
 - [`lambda`](./lambda): lambda (ab)uses.
+- [`packet_reader`](./packet_reader): structured data packet reader.

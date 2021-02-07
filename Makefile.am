@@ -3,7 +3,8 @@ SUBDIRS = \
 	bit_pattern \
 	c_wrapper \
 	event_dispatcher \
-	lambda
+	lambda \
+	packet_reader
 
 .PHONY: docs
 docs:

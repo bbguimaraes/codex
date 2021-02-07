@@ -33,5 +33,6 @@ AC_CONFIG_FILES([
     bit_pattern/Makefile
     c_wrapper/Makefile
     event_dispatcher/Makefile
-    lambda/Makefile])
+    lambda/Makefile
+    packet_reader/Makefile])
 AC_OUTPUT

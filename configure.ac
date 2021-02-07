@@ -29,5 +29,5 @@ AS_IF([test "$ENABLE_TESTS" != no],
 
 AC_CONFIG_FILES([
     Makefile base64/Makefile bit_pattern/Makefile c_wrapper/Makefile
-    event_dispatcher/Makefile lambda/Makefile])
+    event_dispatcher/Makefile lambda/Makefile packet_reader/Makefile])
 AC_OUTPUT

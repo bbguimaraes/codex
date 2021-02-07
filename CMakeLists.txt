@@ -42,4 +42,5 @@ set_target_properties(
 add_subdirectory(base64)
 add_subdirectory(bit_pattern)
 add_subdirectory(c_wrapper)
+add_subdirectory(event_dispatcher)
 add_subdirectory(lambda)

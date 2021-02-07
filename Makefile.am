@@ -1,4 +1,6 @@
-SUBDIRS = base64 bit_pattern c_wrapper event_dispatcher lambda packet_reader
+SUBDIRS = \
+	arithmetic_folding base64 bit_pattern c_wrapper event_dispatcher lambda \
+	packet_reader
 
 .PHONY: docs
 docs:

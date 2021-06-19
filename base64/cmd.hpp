@@ -65,7 +65,7 @@ bool cmd_decode(DecodeFunc auto f) {
         [&in, &out, &f](std::size_t n) {
             const auto *ret =
                 std::invoke(f, std::string_view{in.data(), n}, out.data());
-            [[unlikely]] if(!ret)
+            if(!ret) [[unlikely]]
                 return (std::cerr << "invalid input\n"), std::size_t{};
             return static_cast<std::size_t>(ret - out.data());
         });

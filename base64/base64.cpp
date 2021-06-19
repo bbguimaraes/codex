@@ -78,7 +78,7 @@ char *Base64::decode(std::string_view src, char *dst) {
         const auto
             b0 = lu(t, *p++), b1 = lu(t, *p++),
             b2 = lu(t, *p++), b3 = lu(t, *p++);
-        [[unlikely]] if(!check<Base64::lut.size()>(b0, b1, b2, b3))
+        if(!check<Base64::lut.size()>(b0, b1, b2, b3)) [[unlikely]]
             return nullptr;
         *dst++ = static_cast<char>((b0 << 2) | (b1 >> 4));
         *dst++ = static_cast<char>((b1 << 4) | (b2 >> 2));

@@ -2,6 +2,7 @@ SUBDIRS = \
 	arithmetic_folding \
 	base64 \
 	bit_pattern \
+	bsearch \
 	c_wrapper \
 	event_dispatcher \
 	lambda \

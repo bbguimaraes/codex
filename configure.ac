@@ -32,6 +32,7 @@ AC_CONFIG_FILES([
     arithmetic_folding/Makefile
     base64/Makefile
     bit_pattern/Makefile
+    bsearch/Makefile
     c_wrapper/Makefile
     event_dispatcher/Makefile
     lambda/Makefile

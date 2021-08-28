@@ -15,3 +15,4 @@ Repository for code experiments.  Mostly C/++.
 - [`event_dispatcher`](./event_dispatcher): type-safe event listener/dispatcher.
 - [`lambda`](./lambda): lambda (ab)uses.
 - [`packet_reader`](./packet_reader): structured data packet reader.
+- [`time`](./time): simple time measurement and reporting program.

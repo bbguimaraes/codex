@@ -6,7 +6,8 @@ SUBDIRS = \
 	c_wrapper \
 	event_dispatcher \
 	lambda \
-	packet_reader
+	packet_reader \
+	time
 
 .PHONY: docs
 docs:

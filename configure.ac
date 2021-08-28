@@ -36,5 +36,6 @@ AC_CONFIG_FILES([
     c_wrapper/Makefile
     event_dispatcher/Makefile
     lambda/Makefile
-    packet_reader/Makefile])
+    packet_reader/Makefile
+    time/Makefile])
 AC_OUTPUT

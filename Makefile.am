@@ -7,6 +7,7 @@ SUBDIRS = \
 	event_dispatcher \
 	lambda \
 	packet_reader \
+	popcount \
 	time
 
 .PHONY: docs

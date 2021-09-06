@@ -37,5 +37,6 @@ AC_CONFIG_FILES([
     event_dispatcher/Makefile
     lambda/Makefile
     packet_reader/Makefile
+    popcount/Makefile
     time/Makefile])
 AC_OUTPUT

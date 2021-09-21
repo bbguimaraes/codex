@@ -8,6 +8,7 @@
 
 extern "C" {
 #include "thread0.h"
+#include "thread1.h"
 }
 
 using namespace codex::literals;
@@ -65,6 +66,7 @@ void enqueue() {
     void ThreadTest::enqueue ## n ## _data() { ::enqueue_data(); } \
     void ThreadTest::enqueue ## n() { ::enqueue<test ## n>(); }
 T(0)
+T(1)
 #undef T
 
 QTEST_MAIN(ThreadTest)

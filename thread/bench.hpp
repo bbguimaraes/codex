@@ -12,6 +12,8 @@ private slots:
     void enqueue_thread();
     void enqueue0_data();
     void enqueue0();
+    void enqueue1_data();
+    void enqueue1();
 };
 
 #endif

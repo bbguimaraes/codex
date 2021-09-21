@@ -20,6 +20,7 @@ noinst_HEADERS = \
 	common.h \
 	thread.h \
 	thread0.h \
+	thread1.h \
 	bench.hpp \
 	test.hpp
 
@@ -32,7 +33,8 @@ test_SOURCES = \
 	test.cpp \
 	test.moc.cpp \
 	thread.c \
-	thread0.c
+	thread0.c \
+	thread1.c
 
 bench_CXXFLAGS = $(AM_CXXFLAGS) $(TEST_DEPS_CFLAGS) -fPIC
 bench_LDFLAGS = $(AM_LDFLAGS) $(TEST_DEPS_LIBS)
@@ -40,7 +42,8 @@ bench_SOURCES = \
 	bench.cpp \
 	bench.moc.cpp \
 	thread.c \
-	thread0.c
+	thread0.c \
+	thread1.c
 
 %.moc.cpp: %.hpp
 	moc -o $@ $^

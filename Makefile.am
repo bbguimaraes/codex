@@ -11,6 +11,7 @@ SUBDIRS = \
 	packet_reader \
 	popcount \
 	reflection \
+	thread \
 	time \
 	yaml
 

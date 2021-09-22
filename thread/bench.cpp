@@ -10,6 +10,7 @@
 extern "C" {
 #include "thread0.h"
 #include "thread1.h"
+#include "thread2.h"
 }
 
 using namespace codex::literals;
@@ -97,6 +98,7 @@ void ThreadBench::enqueue_thread() {
     void ThreadBench::enqueue ## n() { ::enqueue<test ## n>(); }
 T(0)
 T(1)
+T(2)
 #undef T
 
 QTEST_MAIN(ThreadBench)

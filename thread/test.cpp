@@ -10,6 +10,7 @@ extern "C" {
 #include "thread0.h"
 #include "thread1.h"
 #include "thread2.h"
+#include "thread3.h"
 }
 
 using namespace codex::literals;
@@ -69,6 +70,7 @@ void enqueue() {
 T(0)
 T(1)
 T(2)
+T(3)
 #undef T
 
 QTEST_MAIN(ThreadTest)

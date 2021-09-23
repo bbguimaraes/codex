@@ -12,6 +12,7 @@ extern "C" {
 #include "thread1.h"
 #include "thread2.h"
 #include "thread3.h"
+#include "thread4.h"
 }
 
 using namespace codex::literals;
@@ -101,6 +102,7 @@ T(0)
 T(1)
 T(2)
 T(3)
+T(4)
 #undef T
 
 QTEST_MAIN(ThreadBench)

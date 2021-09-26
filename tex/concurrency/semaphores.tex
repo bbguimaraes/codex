@@ -1,0 +1,50 @@
+\section{Semaphores}
+
+\subsection{\texttt{futex(2)}}
+
+A \textit{futex} (short for \textit{fast user-space mutex}) is a primitive in
+the Linux kernel used to build higher-level concurrency primitives, introduced
+in 2003 in the 2.6 stable series by Hubertus Franke, Matthew Kirkwood, Ingo
+Molnár, and Rusty Russell.  The ``fast'' portion of the name refers to its
+user-space component, which can be as simple as a single atomic operation on an
+integer.  The \texttt{futex(2)} system call handles the slow case of suspending
+threads when there the lock is contended.  Futexes are fast because the cost of
+a system call can be completely avoided when there is no
+contention.\footnotemark
+
+\footnotetext{
+    V. section \secref{sec:concurrency:rcu} for another example of optimizing
+    for the uncontended case.}
+
+The wait queue of suspended threads exists on the kernel side and is associated
+with the memory address supplied by user space.  The \texttt{futex(2)} system
+call is a multiplexer (in the same manner as \texttt{ioctl(2)}) whose two main
+operations are \texttt{FUTEX\_WAIT} and \texttt{FUTEX\_WAKE}.  \texttt{WAIT}
+adds the current thread to the wait queue (after ensuring --- atomically ---
+that the value being waited on has not changed), while \texttt{WAKE} resumes
+threads currently on the queue.  Other operations are available as more
+specialized versions of \texttt{WAKE}:
+
+\begin{itemize}
+    \item \texttt{FUTEX\_CMP\_REQUEUE}:
+        wakes a specified number of threads and transfers any remaining ones to
+        a second queue (avoids a \textit{thundering herd} on wake)
+    \item \texttt{FUTEX\_WAKE\_OP}:
+        provides a more flexible waking comparison operation based on a number
+        of available operations on a second value
+\end{itemize}
+
+Higher-level concurrency primitives are built using these two operations.  One
+of the simplest is an event that can be signaled and waited on (extracted,
+slightly reformatted, from \cite{Drepper2011}, v. for further examples and
+discussion):
+
+\begin{lstlisting}[style=c++]
+class event {
+public:
+    void signal(void) { futex_wake(&++this->val, INT_MAX); }
+    void wait(void) { futex_wait(&this->val, this->val); }
+private:
+    int val = 0;
+};
+\end{lstlisting}

@@ -3,6 +3,7 @@ codex
 
 Repository for code experiments.  Mostly C/++.
 
+- [`algo`](./algo): assorted algorithms.
 - [`arithmetic_folding`](./arithmetic_folding): how far will the compiler go to
   optimize a sequence of arithmetic operations that involve constant
   expressions?

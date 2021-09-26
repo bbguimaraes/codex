@@ -1,0 +1,46 @@
+\documentclass[a4paper]{book}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[greek,english]{babel}
+\usepackage{color}
+\usepackage{colortbl}
+\usepackage[inline,shortlabels]{enumitem}
+\usepackage[T1]{fontenc}
+\usepackage[hmarginratio=1:1]{geometry}
+\usepackage{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage{imakeidx}
+\usepackage[lighttt]{lmodern}
+\usepackage{listingsutf8}
+\usepackage{makeidx}
+\usepackage{mdframed}
+\usepackage{multicol}
+\usepackage[safe]{tipa}
+\usepackage{titlesec}
+\usepackage{titling}
+\usepackage{xcolor}
+\usepackage{xfrac}
+%\usepackage{showframe}
+
+\hypersetup{colorlinks=true, allcolors=}
+
+\newcommand{\secref}[1]{\ref{#1} (\textit{\nameref{#1}})}
+\newcommand{\secrefpar}[1]{\ref{#1}, \textit{\nameref{#1}}}
+\newcommand{\ident}[1]{\lstinline[basicstyle=\ttfamily]{#1}}
+
+\makeatletter
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}%
+    {-3.25ex\@plus -1ex \@minus -.2ex}%
+    {1.5ex \@plus .2ex}%
+    {\normalfont\normalsize\bfseries}}
+\makeatother
+
+\newmdenv[
+    align=center,
+    skipbelow=2em,
+    skipabove=2em,
+    innerleftmargin=2em,
+    innerrightmargin=2em,
+    innerbottommargin=2em,
+    innertopmargin=2em,
+]{aside}

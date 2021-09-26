@@ -1,0 +1,33 @@
+\input{def}
+\input{bib}
+\input{listings}
+\input{tikz}
+\usepackage{anyfontsize}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{wrapfig}
+
+\title{codex}
+\author{Bruno Barcarol Guimarães}
+\date{MMXXI}
+
+\begin{document}
+    \frontmatter
+    \input{title}
+    \tableofcontents
+    \mainmatter
+    \input{chapters}
+    \cleardoublepage
+    \phantomsection
+    \addcontentsline{toc}{chapter}{\listfigurename}
+    \listoffigures
+    \cleardoublepage
+    \phantomsection
+    \addcontentsline{toc}{chapter}{\listtablename}
+    \listoftables
+    \cleardoublepage
+    \phantomsection
+    \addcontentsline{toc}{chapter}{Listings}
+    \lstlistoflistings
+    \printbibliography
+\end{document}

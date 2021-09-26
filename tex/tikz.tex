@@ -1,0 +1,32 @@
+\usepackage{tikz}
+\usepackage{pgfplots}
+
+\usetikzlibrary{
+    arrows.meta,
+    calc,
+    circuits.logic.CDH,
+    positioning,
+    shapes.multipart}
+\tikzset{
+    point/.style={circle, fill = black, inner sep = 0px, minimum size = 0.3em},
+    object/.style={
+        rectangle split, draw,
+        rectangle split parts = #1,
+        rectangle split horizontal = false,
+        rectangle split part align = base,
+        rectangle split part fill = {black!20, white},
+        minimum height = 2em,
+    },
+    lnode/.style={
+        rectangle split, draw,
+        rectangle split parts = 2,
+        rectangle split horizontal = true,
+        rectangle split part align = base,
+        font = \ttfamily,
+    },
+    circuit_diagram/.style={
+        circuit logic CDH,
+        huge circuit symbols,
+    },
+}
+\pgfplotsset{compat = newest}

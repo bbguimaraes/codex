@@ -1,0 +1,80 @@
+\lstset{
+    basicstyle=\footnotesize\ttfamily,
+    captionpos=b,
+    keywordstyle={\bfseries},
+    emphstyle={\bfseries\color{black!66}},
+    stringstyle={\bfseries\color{black!66}},
+    commentstyle={\bfseries\color{black!66}},
+    showstringspaces=false,
+    aboveskip=\bigskipamount,
+    belowskip=\bigskipamount,
+    xleftmargin=\parindent,
+    xrightmargin=\parindent,
+}
+
+\lstdefinestyle{x86}{
+    language={[x86masm]Assembler},
+    morekeywords={
+        rax,rbp,rbx,rcx,rdi,rdx,rip,rsi,rsp,r8,r9,
+        dil,r8d,
+        xmm0,xmm1,
+        cmovne,movabs,movss,
+        blsr,popcnt,rorx,
+    },
+}
+
+\lstdefinestyle{arm}{
+    numberstyle=\slshape,
+    keywords={
+        add,b,bne,bx,bxeq,bxne,cmp,dmb,it,lda,ldaex,ldr,ldrex,movt,movw,stl,
+        stlex,stlexeq,str,strex,strexeq,ubfx,
+        ip,lr,r0,r1,r2,r3,r4,r5,r6,r7,
+    },
+    classoffset=1,
+    keywordstyle=[1]\slshape,
+    keywords={eq,ish,lsl},
+}
+
+\lstdefinestyle{powerpc}{
+    numberstyle=\slshape,
+    keywords={
+        addis,blr,bne,cmpw,extsw,isync,ld,lwarx,lwsync,lwz,stw,stwcx,sync,
+    },
+    classoffset=1,
+    keywordstyle=[1]\slshape,
+    keywords={},
+}
+
+\lstdefinestyle{c}{
+    language=c,
+    emph={INT_MAX,INT_MIN,NULL},
+    morekeywords={
+        __VA_ARGS__,
+        bool,false,true,
+        ptrdiff_t,size_t,
+        int8_t,int16_t,int32_t,int64_t,
+        uint8_t,uint16_t,uint32_t,uint64_t,
+        u8,u16,u32,u64,
+        inline,offsetof,static_assert,
+        atomic_uint,memory_order,mtx_t,
+        memory_order_acquire,memory_order_relaxed,memory_order_release,
+    },
+}
+
+\lstdefinestyle{c++}{
+    style=c,
+    language=c++,
+    emph={INT_MAX,INT_MIN,NULL},
+    morekeywords={
+        __VA_ARGS__, __VA_OPT__,
+        bool,false,true,
+        ptrdiff_t,size_t,
+        int8_t,int16_t,int32_t,int64_t,
+        uint8_t,uint16_t,uint32_t,uint64_t,
+        u8,u16,u32,u64,
+        inline,offsetof,static_assert,
+        atomic_uint,memory_order,mtx_t,
+        memory_order_acquire,memory_order_relaxed,memory_order_release,
+        concept,constexpr,consteval,decltype,noexcept,requires,
+    },
+}

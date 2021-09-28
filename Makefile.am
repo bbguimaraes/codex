@@ -6,6 +6,7 @@ SUBDIRS = \
 	c_wrapper \
 	event_dispatcher \
 	lambda \
+	list \
 	packet_reader \
 	popcount \
 	time

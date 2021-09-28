@@ -36,6 +36,7 @@ AC_CONFIG_FILES([
     c_wrapper/Makefile
     event_dispatcher/Makefile
     lambda/Makefile
+    list/Makefile
     packet_reader/Makefile
     popcount/Makefile
     time/Makefile])

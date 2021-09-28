@@ -14,6 +14,7 @@ Repository for code experiments.  Mostly C/++.
   pairs.
 - [`event_dispatcher`](./event_dispatcher): type-safe event listener/dispatcher.
 - [`lambda`](./lambda): lambda (ab)uses.
+- [`list`](./list): linked lists.
 - [`packet_reader`](./packet_reader): structured data packet reader.
 - [`popcount`](./popcount): set bit counter.
 - [`time`](./time): simple time measurement and reporting program.

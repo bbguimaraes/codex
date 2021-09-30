@@ -8,7 +8,7 @@ struct node {
     int i;
 };
 
-struct node *list_reverse(struct node *n) {
+static inline struct node *list_reverse(struct node *n) {
     struct node *last = NULL;
     while(n) {
         struct node *const next = n->next;
@@ -17,7 +17,7 @@ struct node *list_reverse(struct node *n) {
     return last;
 }
 
-struct node *list_remove(struct node **n, int i) {
+static inline struct node *list_remove(struct node **n, int i) {
     for(; *n; n = &(*n)->next) {
         if((*n)->i != i)
             continue;

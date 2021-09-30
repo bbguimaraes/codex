@@ -8,13 +8,18 @@ struct node {
     int i;
 };
 
+static inline void list_push_front(struct node **l, struct node *n) {
+    n->next = *l;
+    *l = n;
+}
+
 static inline struct node *list_reverse(struct node *n) {
-    struct node *last = NULL;
-    while(n) {
-        struct node *const next = n->next;
-        n->next = last, last = n, n = next;
+    struct node *ret = NULL;
+    for(struct node *next = NULL; n; n = next) {
+        next = n->next;
+        list_push_front(&ret, n);
     }
-    return last;
+    return ret;
 }
 
 static inline struct node *list_remove(struct node **n, int i) {

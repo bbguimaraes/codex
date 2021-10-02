@@ -18,3 +18,4 @@ Repository for code experiments.  Mostly C/++.
 - [`packet_reader`](./packet_reader): structured data packet reader.
 - [`popcount`](./popcount): set bit counter.
 - [`time`](./time): simple time measurement and reporting program.
+- [`yaml`](./yaml): YAML converter utility.

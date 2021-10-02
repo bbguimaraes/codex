@@ -9,7 +9,8 @@ SUBDIRS = \
 	list \
 	packet_reader \
 	popcount \
-	time
+	time \
+	yaml
 
 .PHONY: docs
 docs:

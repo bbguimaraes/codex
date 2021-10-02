@@ -39,5 +39,6 @@ AC_CONFIG_FILES([
     list/Makefile
     packet_reader/Makefile
     popcount/Makefile
-    time/Makefile])
+    time/Makefile
+    yaml/Makefile])
 AC_OUTPUT

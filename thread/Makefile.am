@@ -1,11 +1,13 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
 AM_CPPFLAGS = -I@srcdir@/..
+AM_CPPFLAGS += -I@srcdir@/stlab/libraries
 AM_CFLAGS = -std=c11 -O2 -Wall -Wextra -pedantic
 AM_CXXFLAGS = \
 	-std=c++2a -O2 \
 	-Wall -Wextra -pedantic -Wno-missing-field-initializers
 AM_LDFLAGS = -lpthread
+#AM_LDFLAGS += -ldispatch
 
 if ENABLE_BENCHMARKS
 noinst_PROGRAMS = bench

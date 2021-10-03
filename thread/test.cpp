@@ -14,6 +14,10 @@ extern "C" {
 #include "thread4.h"
 }
 
+#define STLAB_FORCE_TASK_SYSTEM_PORTABLE
+//#define STLAB_FORCE_TASK_SYSTEM_LIBDISPATCH
+#include <stlab/concurrency/default_executor.hpp>
+
 using namespace codex::literals;
 
 namespace {
@@ -74,5 +78,45 @@ T(2)
 T(3)
 T(4)
 #undef T
+
+void ThreadTest::enqueue_stlab_data() { ::enqueue_data(); }
+
+void ThreadTest::enqueue_stlab() {
+    QFETCH(const std::size_t, size);
+    QFETCH(const std::size_t, queue_size);
+    (void)queue_size;
+    const auto n = size * 1 << 10;
+    struct data { int *p; std::size_t i; };
+    constexpr auto f = [](void *p) {
+        data d = *static_cast<data*>(p);
+        *d.p = d.i;
+        return 0;
+    };
+    auto v = std::vector<int>(n);
+    auto data_v = std::vector<data>(n);
+    {
+#if STLAB_TASK_SYSTEM_PRIVATE_PORTABLE()
+        auto pool = stlab::detail::priority_task_system{
+            static_cast<unsigned>(queue_size)
+        };
+#elif STLAB_TASK_SYSTEM_PRIVATE_LIBDISPATCH()
+        auto pool = stlab::detail::executor_type{};
+#endif
+        for(std::size_t i = 0; i < n; ++i) {
+            void *const data = &(data_v[i] = {.p = v.data() + i, .i = i});
+#if STLAB_TASK_SYSTEM_PRIVATE_PORTABLE()
+            pool.execute<0>([f, data] { f(data); });
+#elif STLAB_TASK_SYSTEM_PRIVATE_LIBDISPATCH()
+            pool([f, data] { f(data); });
+#endif
+        }
+#if STLAB_TASK_SYSTEM_PRIVATE_LIBDISPATCH()
+        dispatch_group_wait(
+            stlab::detail::group()._group, DISPATCH_TIME_FOREVER);
+#endif
+    }
+    for(std::size_t i = 0; i < n; ++i)
+        QCOMPARE(v[i], i);
+}
 
 QTEST_MAIN(ThreadTest)

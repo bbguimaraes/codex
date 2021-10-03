@@ -16,6 +16,8 @@ private slots:
     void enqueue3();
     void enqueue4_data();
     void enqueue4();
+    void enqueue_stlab_data();
+    void enqueue_stlab();
 };
 
 #endif

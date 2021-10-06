@@ -1,0 +1,299 @@
+\section{Metaprogramming}
+
+\label{sec:c++:meta}
+
+\subsection{Template instantiation}
+
+Function, class, and variable templates by themselves are not usable directly in
+code: they must first be instantiated, i.e. the specific definition --- of which
+there can be many due to overloads and specializations --- has to be determined
+and its template parameters replaced.  Instantiation can happen in two ways:
+
+\begin{description}
+    \item[Explicit instantion]
+        is an expression whose entire purpose is to generate a particular
+        template instantiation.  It can be used to precisely control the
+        placement of the code generated from the instantiation.
+    \item[Implicit instantiation]
+        happens when the template is used in an expression that would require a
+        definition.  The template is instantiated from the context it is used in
+        and the resulting definition is used in the expression.
+\end{description}
+
+Both explicit and implicit instantiation of function, class, and variable
+templates operate under the same general rules and consist of the following
+stages:
+
+\begin{description}
+    \item[Name lookup]
+        associates the referenced name with one or more declarations.  In the
+        case of overloaded functions, this list can also include non-template
+        functions.
+    \item[Template argument deduction]
+        determines the types or values (for type and non-type parameters,
+        respectively) of the template arguments according to the instantiating
+        expression and the template declaration.
+    \item[Overload resolution / specialization selection]
+        determines which member of the overload set or which specialization is
+        used.
+    \item[Template argument substitution]
+        replaces every occurrence of each parameter in the selected template
+        definition with its corresponding argument.
+\end{description}
+
+Simple examples of implicit instantiations are:
+
+\begin{lstlisting}[style=c++]
+template<typename T> void f(T);
+f(0); // instantiates f<int>
+template<typename T> struct S {};
+S<int>{}; // instantiates S<int>
+template<typename T> auto v = T{};
+v<int>; // instantiates v<int>
+\end{lstlisting}
+
+Of the four stages mentioned above, only name lookup and substitution apply in
+all cases: none of the examples above have specializations and only \texttt{f}
+deduces its arguments.  It is always possible to specify template arguments
+explicitly: \texttt{f<int>(0)} would be an equivalent instantiation and require
+no deduction.  Partial argument substitution is performed on the viable
+declarations and deduction, when it happens, is applied to the result.  For
+function templates, an explicit argument list, even if empty (e.g.
+\texttt{f<>(0)}), eliminates non-template functions from the overload set.
+
+\subsection{SFINAE}
+
+One fundamental aspect of how template instantiation happens, in particular the
+selection of an overload or specialization in particular, is that invalid
+expressions are temporarily allowed to be formed.  The technical term used by
+the standard for such cases is \textit{ill-formed}, and the result is a
+\textit{substitution failure}.  Instead of generating a compilation error, as an
+ill-formed program would in any other context, only the substitution fails and
+the overload or specialization is simply discarded.  This follows naturally from
+the way overloading and specialization work, but has profound consequences and
+forms the basis of template metaprogramming: \textit{substitution failure is not
+an error} (SFINAE).
+
+To understand why it is necessary in those contexts, consider the following
+example, where a parameter of one of the functions templates in an overload set
+is a reference.  The first call matches the first declaration, with \texttt{T}
+as \texttt{int}, while the second matches the second declaration, with
+\texttt{T} as \texttt{void}.  However, both also match the other declaration in
+each case, and both substitutions are ill-formed: the first generates an
+instantiation with unresolved parameters, while the second generates a reference
+to \texttt{void}.  If SFINAE did not apply, both instantiations would ultimately
+be invalid.  It does, so the program is valid and calls the first and second
+functions in the overload set, as expected.
+
+\begin{lstlisting}[style=c++]
+template<typename T> void f(const T&);
+template<typename T> void f(...);
+
+f(0), f<void>();
+\end{lstlisting}
+
+Substitution failures are only ignored in what is called the \textit{immediate
+context} of the instantiation, the definition of which has been expanded
+throughout the history of C++.  It includes:
+
+\begin{itemize}
+    \item Types used in the function prototype.
+    \item Types used in the template parameter declarations.
+    \item Expressions used in the function prototype (since C++11).
+    \item Expressions used in the template parameter declarations (since C++11).
+    \item Expressions used in the \texttt{explicit} specifier (since C++20).
+\end{itemize}
+
+Most notably missing in this list is the body of the function: substitution
+errors in its definition are not ignored.  The same is true for any further
+template instantiations that occur in the immediate context, so in the example
+below the correct version of \texttt{f} is called while the call to \texttt{g}
+generates a compilation error, even though they are functionally equivalent.
+This is because the substitution error happens in the instantiation of
+\texttt{S}, which is not considered the immediate context of the substitution in
+\texttt{g}.
+
+\begin{lstlisting}[style=c++]
+template<typename T, typename U = T::type> void f(void);
+template<typename T> void f(...);
+
+template<typename T> struct S { using type = T::type; };
+template<typename T, typename U = S<T>::type> void g(void);
+template<typename T> void g(...);
+
+struct T {};
+f<T>(), g<T>();
+\end{lstlisting}
+
+The examples so far demonstrated substitution failures involving type
+expressions.  The prototypical application of this pattern in the standard
+library is the \texttt{std::enable\_if} type, shown in listing
+\ref{lst:c++:enable_if}.  It is a type metafunction whose parameters are a
+boolean value and a type.  The specialization for \texttt{true} as the first
+argument simply returns that type unchanged.  The base case --- whose argument
+can only be \texttt{false} --- on the other hand declares no return type at all.
+The usual convenience template alias is also defined.
+
+\begin{figure}[ht]
+    \begin{lstlisting}[
+        style=c++,
+        label={lst:c++:enable_if},
+        caption={\texttt{enable\_if}},
+    ]
+template<bool, typename T = void>
+struct enable_if {};
+
+template<typename T>
+struct enable_if<true, T> : std::type_identity<T> {};
+
+template<bool b, typename T = void>
+using enable_if_t = enable_if<b, T>::type;
+    \end{lstlisting}
+\end{figure}
+
+The utility of \texttt{enable\_if} might be questionable at first, but not in
+the context of SFINAE.  Because the \texttt{type} member only exists when the
+predicate is true, expressions such as \texttt{enable\_if<b>::type} and
+\texttt{enable\_if\_t<b>} are ill-formed when \texttt{b} is \texttt{true}.  If
+used during template substitution, this face can be exploited to discard an
+otherwise viable candidate based on the value of the boolean predicate.
+Consider the following code, which declares specialized versions of a function
+\texttt{f} for integral and floating-point types:
+
+\begin{lstlisting}[style=c++]
+template<typename T> std::enable_if_t<std::integral<T>> f(T);
+template<typename T> std::enable_if_t<std::floating_point<T>> f(T);
+
+f(0), f(0.0);
+\end{lstlisting}
+
+Value categories are mutually exclusive, so only one of the predicates will ever
+be true.  In that case, the expansion of \texttt{enable\_if\_t} will result in
+\texttt{void}, and the corresponding version of \texttt{f} will have the type
+\texttt{void(void)}.  The other version will be ill-formed, since the
+\texttt{enable\_if} predicate will be false, and will be discarded.  The end
+result is an unambiguous instantiation depending on the predicate, i.e. the
+value category of \texttt{T}.
+
+Since C++11, another type of substitution failure is also ignored: substitution
+in expressions.  This was due to the introduction of the \texttt{decltype}
+specifier, which greatly increased the contexts in which expressions can be used
+in declarations.  Consider for example the code below, where a \texttt{decltype}
+specifier is used in the declaration of a function's return type.  The
+expression, and as a consequence the entire function prototype, will only be
+valid if \texttt{f} is a callable object and \texttt{args} is a valid sequence
+of arguments for it.
+
+\begin{lstlisting}[style=c++]
+template<typename F, typename ...Args>
+auto f(F &&f, Args &&...args) -> decltype(FWD(f)(FWD(args)...));
+\end{lstlisting}
+
+The standard library provides the \ident{std::invocable} concept and the
+\ident{std::is_invocable} type trait (with a few variations), which have a
+similar purpose and can be implemented using this technique, as partially
+demonstrated in listing \ref{lst:c++:is_invocable}.  The
+\ident{is_invocable_impl} overload set uses two familiar devices: a base case
+which uses variable arguments and a \texttt{decltype} specifier which tests the
+validity of an expression.  However, here the comma operator is used to
+dissociate the expression from the actual return type.  The expression must
+still be well-formed for this declaration to be considered valid, but the
+resulting type will be that of the last expression --- here simply
+\ident{std::true_type}, following the semantic rules of the comma operator.
+
+\texttt{decltype} is used again in the primary definition, a simple alias
+template, demonstrating another common pattern.  The two
+\ident{is_invocable_impl} prototypes are never actually defined: they are used
+purely as a syntactical mechanism to choose between two types ---
+\ident{std::false_type} and \ident{std::true_type}.  This combination of an
+overload set --- possibly including function templates --- used exclusively in a
+\texttt{decltype} specifier is very common in metaprogramming.
+
+\begin{figure}[ht]
+    \begin{lstlisting}[
+        style=c++,
+        label={lst:c++:is_invocable},
+        caption={\ident{is_invocable}},
+    ]
+std::false_type is_invocable_impl(...);
+
+template<typename F, typename ...Args>
+auto is_invocable_impl(F &&f, Args &&...args)
+    -> decltype(FWD(f)(FWD(args)...), std::true_type{});
+
+template<typename F, typename ...Args>
+using is_invocable =
+    decltype(is_invocable_impl(std::declval<F>(), std::declval<Args>()...));
+
+template<typename F, typename ...Args>
+inline constexpr bool is_invocable_v = is_invocable<F, Args...>::value;
+
+static_assert(is_invocable_v<int(float, void*), float, void*>);
+static_assert(!is_invocable_v<int(float, void*), void*, float>);
+    \end{lstlisting}
+    \begin{lstlisting}[
+        style=c++,
+        label={lst:c++:declval},
+        caption={\ident{declval}},
+    ]
+template<typename T> T &&declval(void);
+    \end{lstlisting}
+    \begin{lstlisting}[
+        style=c++,
+        label={lst:c++:void_t},
+        caption={\ident{void_t}},
+    ]
+template<typename...> using void_t = void;
+    \end{lstlisting}
+\end{figure}
+
+The prototypical application of this pattern in the standard library is the
+\ident{declval} ``function'', another utility that is impressive in its
+conciseness and usefulness, shown in listing \ref{lst:c++:declval}.  Similar to
+\ident{is_invocable_impl} above, this function is never actually defined: its
+entire purpose is to be used in \textit{unevaluated contexts} (such as
+\texttt{sizeof} and \texttt{decltype} expressions).  Its advantage over a
+simpler expression such as \texttt{T\{\}} is that it works even if the type is
+not default-constructible.  This is because it is restricted to unevaluated
+contexts, so it does not need to be defined and avoids having to form the
+expression required to actually initialize an object of the given type.
+
+Another deceptively simple standard library utility, introduced in C++17, is
+\ident{void_t}.  Its definition, shown in listing \ref{lst:c++:void_t}, barely
+has more characters than \ident{declval}'s.  The code below shows an
+application.  It uses yet another SFINAE technique: forming a type or expression
+in the partial specialization of a class template.  If the substitution is
+ill-formed, the specialization is discarded just as if it were an invalid member
+of an overload set\footnotemark.
+
+\footnotetext{
+    In reality, this application of SFINAE is not mentioned in the standard (v.
+    \href{https://cplusplus.github.io/CWG/issues/2054.html}{CWG issue 2054}).
+    Practically, however, it is implemented by every C++ compiler and widely
+    used, being even a part of the future \textit{Library Fundamentals v2}
+    Technical Specification.}
+
+\begin{lstlisting}[style=c++]
+template<typename T, typename = void>
+struct referenceable : std::false_type {};
+
+template<typename T>
+struct referenceable<T, std::void_t<T&>> : std::true_type {};
+
+template<typename T>
+inline constexpr bool referenceable_v = referenceable<T>::value;
+
+static_assert(!referenceable_v<void>);
+static_assert(referenceable_v<int>);
+static_assert(referenceable_v<int&>);
+\end{lstlisting}
+
+\ident{void_t} in this context serves as a very convenient and concise place for
+the predicate type expression.  If \texttt{T\&} is a valid expression (i.e. if
+\texttt{T} can have a reference specifier attached to it, essentially equivalent
+to \ident{!std::is_void<T>}), the substitution succeeds and the
+\ident{std::void_t} instantiation becomes simply a complicated type alias for
+\texttt{void}, which matches the primary template definition (the default
+template argument is fixed before partial specializations are analyzed, so this
+\texttt{void} has to match it).  If the substitution generates an invalid type
+(i.e. \texttt{void\&}), it fails and the specialization is discarded.

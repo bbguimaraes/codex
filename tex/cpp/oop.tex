@@ -29,14 +29,13 @@ While useful in some cases, this pattern is also needlessly wasteful when this
 flexibility is not necessary and many instances of the \texttt{struct} (i.e.
 objects) have the same values for their function pointer members.  The method
 pointers are usually moved to a separate structure so that multiple objects can
-refer to the unique combinations of method implementations (listing
-\ref{lst:c++:vtable}, figure \ref{fig:c++:vtable}).  This method-only structure
-is usually called a \textit{virtual function table} (abbreviated as
-\textit{vtable}).
+refer to the unique combinations of method implementations (figure
+\ref{fig:c++:vtable}).  This method-only structure is usually called a
+\textit{virtual function table} (abbreviated as \textit{vtable}).
 
 \begin{figure}[ht]
     \centering
-    \begin{subfigure}[t]{0.5\textwidth}
+    \begin{subfigure}[c]{0.5\textwidth}
         \begin{lstlisting}[
             style=c,
             label={lst:c++:method_ptrs},
@@ -53,7 +52,32 @@ void f(struct object *o) {
 }
         \end{lstlisting}
     \end{subfigure}
-    \begin{subfigure}[t]{0.45\textwidth}
+    \begin{subfigure}[c]{0.35\textwidth}
+        \begin{tikzpicture}[
+            rectangle/.style={minimum height = 2em},
+            >={Stealth[round]},
+        ]
+            \node[object = 3] (obj) at (0, 0) {
+                \vrule height 0.5em depth 0.25em width 0pt
+                \itshape obj
+                \nodepart{two} \vrule height 0.5em depth 0.25em width 0pt
+                method0
+                \nodepart{three} \vrule height 0.5em depth 0.25em width 0pt
+                method1
+            };
+            \node[rectangle,draw] (method0) at (3,  1) [rectangle] {method0};
+            \node[rectangle,draw] (method1) at (3, -1) [rectangle] {method1};
+            \draw[->] (obj.two east) -- (method0.west);
+            \draw[->] (obj.three east) -- (method1.west);
+        \end{tikzpicture}
+    \end{subfigure}
+    \caption{Object with method pointers}
+    \label{fig:c++:method_ptrs}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \begin{subfigure}[c]{0.45\textwidth}
         \begin{lstlisting}[
         style=c,
         label={lst:c++:vtable},
@@ -74,33 +98,8 @@ void f(struct object *o) {
 }
         \end{lstlisting}
     \end{subfigure}
-\end{figure}
-
-\begin{figure}[ht]
-    \centering
-    \begin{subfigure}[h]{0.35\textwidth}
-        \begin{tikzpicture}[
-            rectangle/.style={minimum height = 2em},
-            >={Stealth[round]},
-        ]
-            \node[object = 3] (obj) at (0, 0) {
-                \vrule height 0.5em depth 0.25em width 0pt
-                \itshape obj
-                \nodepart{two} \vrule height 0.5em depth 0.25em width 0pt
-                method0
-                \nodepart{three} \vrule height 0.5em depth 0.25em width 0pt
-                method1
-            };
-            \node[rectangle,draw] (method0) at (3,  1) [rectangle] {method0};
-            \node[rectangle,draw] (method1) at (3, -1) [rectangle] {method1};
-            \draw[->] (obj.two east) -- (method0.west);
-            \draw[->] (obj.three east) -- (method1.west);
-        \end{tikzpicture}
-        \caption{Object with method pointers}
-        \label{fig:c++:method_ptrs}
-    \end{subfigure}
-    \qquad
-    \begin{subfigure}[h]{0.55\textwidth}
+    \hspace{1em}
+    \begin{subfigure}[c]{0.5\textwidth}
         \begin{tikzpicture}[
             rectangle/.style={minimum height = 2em},
             >={Stealth[round]},
@@ -125,10 +124,9 @@ void f(struct object *o) {
             \draw[->] (vtable.two east) -- (method0.west);
             \draw[->] (vtable.three east) -- (method1.west);
         \end{tikzpicture}
-        \caption{Object with virtual table pointer}
-        \label{fig:c++:vtable}
     \end{subfigure}
-    \caption{Storage options for methods}
+    \caption{Object with virtual table pointer}
+    \label{fig:c++:vtable}
 \end{figure}
 
 The benefit of this organization is the reduced storage requirement: each unique

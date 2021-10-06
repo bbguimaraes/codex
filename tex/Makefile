@@ -12,7 +12,10 @@ CFLAGS := -std=c18 $(WARNINGS)
 CXXFLAGS := -std=c++20 $(WARNINGS)
 TEX_INPUT := \
 	codex.bib *.tex */*.tex
-LISTINGS :=
+LISTINGS := \
+	cpp/mult_inh \
+	cpp/mult_inh.o \
+	cpp/mult_opt.o
 
 .PHONY: all clean clean-listings link-full link-fast listings
 all: codex.pdf listings

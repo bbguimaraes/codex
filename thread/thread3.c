@@ -25,20 +25,20 @@ static const u64 sleep_dur_ns = 1000 * 1000;
 
 static bool queue3_push(struct queue3 *q, struct task t) {
     const size_t w = (q->w + 1) % q->size;
-    while(atomic_load(&q->r) == w)
+    while(atomic_load_explicit(&q->r, memory_order_acquire) == w)
         if(!sleep_ns(sleep_dur_ns))
             return false;
     q->tasks[q->w] = t;
-    atomic_store(&q->w, w);
+    atomic_store_explicit(&q->w, w, memory_order_release);
     return true;
 }
 
 static bool queue3_pop(struct queue3 *q, struct task *t) {
-    while(atomic_load(&q->w) == q->r)
+    while(atomic_load_explicit(&q->w, memory_order_acquire) == q->r)
         if(!sleep_ns(sleep_dur_ns))
             false;
     const struct task ret = q->tasks[q->r];
-    atomic_store(&q->r, (q->r + 1) % q->size);
+    atomic_store_explicit(&q->r, (q->r + 1) % q->size, memory_order_release);
     *t = ret;
     return true;
 }

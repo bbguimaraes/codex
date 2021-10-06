@@ -11,7 +11,7 @@ WARNINGS := -Wall -Wextra -Wpedantic -Wconversion
 CFLAGS := -std=c18 $(WARNINGS)
 CXXFLAGS := -std=c++20 $(WARNINGS)
 TEX_INPUT := \
-	codex.bib *.tex */*.tex
+	codex.bib *.tex */*.tex */*/*.tex
 LISTINGS := \
 	cpp/mult_inh \
 	cpp/mult_inh.o \

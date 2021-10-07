@@ -1,0 +1,268 @@
+\section{Case studies}
+
+\textit{WIP}
+
+\subsection{Double-checked locking}
+
+\textit{TODO}
+
+\url{https://preshing.com/20130930/double-checked-locking-is-fixed-in-cpp11}
+
+\begin{lstlisting}[style=c++]
+std::atomic<C*> C::m_instance = {nullptr};
+
+C *C::instance(void) {
+    if(C::m_instance.load() == nullptr) {
+        std::lock_guard lock{C::mtx_w};
+        if(C::m_instance.load(std::memory_order_relaxed) == nullptr)
+            C::m_instance.store(new C, std::memory_order_relaxed);
+    }
+    return C::m_instance.load();
+}
+\end{lstlisting}
+
+\subsection{Relaxed atomic operations}
+
+A counter which has no effect on memory ordering and is externally synchronized.
+
+\begin{lstlisting}[style=c++]
+void thread(void) {
+    for(;;) {
+        // ...
+        counter.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+int main(void) {
+    start_workers(thread);
+    join_workers(thread);
+    std::cout << counter.load(std::memory_order_relaxed) << '\n';
+}
+\end{lstlisting}
+
+A stop signal for worker threads.
+
+\begin{lstlisting}[style=c++]
+void thread(void) {
+    while(!stop.load(std::memory_order_relaxed))
+        // ...
+}
+
+int main(void) {
+    start_workers(thread);
+    stop.store(std::memory_order_release);
+    join_workers(thread);
+}
+\end{lstlisting}
+
+Incrementing a reference counter.
+
+\begin{lstlisting}[style=c++]
+class ref {
+    using enum std::memory_order;
+    std::atomic<unsigned> c;
+public:
+    void inc(void) { this->c.fetch_add(1, relaxed); }
+    bool dec(void) { return this->c.fetch_sub(1, acq_rel); }
+};
+\end{lstlisting}
+
+\subsection{Hash table}
+
+\url{https://preshing.com/20130529/a-lock-free-linear-search}
+
+\url{https://preshing.com/20130605/the-worlds-simplest-lock-free-hash-table}
+
+\url{https://preshing.com/20160201/new-concurrent-hash-maps-for-cpp}
+
+\url{https://preshing.com/20160222/a-resizable-concurrent-map}
+
+\subsection{Concurrent pipeline}
+
+The simplest form of concurrency is the concurrent pipeline.  Tasks that
+initially are unnecessarily executed serially are moved to a separate thread.
+The main thread then simply dispatches work to the worker threads and possibly
+waits for them to complete at a later point in time.
+
+Figure \ref{fig:conc:serial_pipe} shows a hypothetical graphics engine with a
+serial pipeline.  At each frame, some processing of the data to be displayed
+happens, followed by calls to the graphics hardware.  Once the data has been
+processed, displaying them is an independent operation, and so is the next
+frame's processing.  Figure \ref{fig:conc:pipe} shows the same process with a
+concurrent pipeline.  A separate thread of execution receives a signal to start
+the rendering process, and the main thread is free to continue to the next
+frame.  The engine and graphics tasks are now more packed, allowing more of them
+to be completed in the same amount of time.
+
+\begin{figure}[ht]
+    \centering
+    \begin{tikzpicture}[
+        rectangle/.style={minimum height = 1.5em},
+        point/.style={
+            circle, fill = black,
+            inner sep = 0px, minimum size = 0px,
+        },
+        stage/.style={
+            rectangle split,
+            rectangle split horizontal,
+            rectangle split parts = 2,
+            rectangle split part align = base,
+            rectangle split ignore empty parts,
+            draw, fill = white,
+        },
+        >={Stealth[round]},
+    ]
+        \node (end) [point] at (12,  0) {};
+        \path (0, 0) edge[->] (end);
+        \matrix[column sep = 0.7em] at (6, 0) {
+            \node [stage] {
+                \hspace{1em} engine \hspace{1em} {}
+                \nodepart{two} graphics
+            }; &
+            \node [stage] {
+                \hspace{1em} engine \hspace{1em} {}
+                \nodepart{two} graphics
+            }; &
+            \node [stage] {
+                \hspace{1em} engine \hspace{1em} {}
+            }; \\
+        };
+    \end{tikzpicture}
+    \caption{Serial pipeline}
+    \label{fig:conc:serial_pipe}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \begin{tikzpicture}[
+        rectangle/.style={minimum height = 1.5em},
+        point/.style={
+            circle, fill = black,
+            inner sep = 0px, minimum size = 0px,
+        },
+        graphics/.style={rectangle, draw, fill=white},
+        engine/.style={graphics, minimum width = 6.5em},
+        arrow/.style={->},
+        >={Stealth[round]},
+    ]
+        \node (end0) [point] at (12,  0) {};
+        \node (end1) [point] at (12, -1) {};
+        \path (0,  0) edge[arrow] (end0);
+        \path (0, -1) edge[arrow] (end1);
+        \node (engine0) [engine] at (2.0, 0) {engine};
+        \node (engine1) [engine] at (4.5, 0) {engine};
+        \node (engine2) [engine] at (7.0, 0) {engine};
+        \node (engine3) [engine] at (9.5, 0) {engine};
+        \node (graphics0) [graphics] at (3.8, -1) {graphics};
+        \node (graphics1) [graphics] at (6.3, -1) {graphics};
+        \node (graphics2) [graphics] at (8.8, -1) {graphics};
+        \path ($ (engine0.south west)!.9!(engine0.south east) $)
+            edge[arrow] (graphics0.north west);
+        \path (graphics0.north east)
+            edge[arrow] ($ (engine1.south west)!.8!(engine1.south east) $);
+        \path ($ (engine1.south west)!.9!(engine1.south east) $)
+            edge[arrow] (graphics1.north west);
+        \path (graphics1.north east)
+            edge[arrow] ($ (engine2.south west)!.8!(engine2.south east) $);
+        \path ($ (engine2.south west)!.9!(engine2.south east) $)
+            edge[arrow] (graphics2.north west);
+        \path (graphics2.north east)
+            edge[arrow] ($ (engine3.south west)!.8!(engine3.south east) $);
+    \end{tikzpicture}
+    \caption{Concurrent pipeline}
+    \label{fig:conc:pipe}
+\end{figure}
+
+\subsection{Dedicated thread}
+
+For tasks that may take more than one frame to complete and are not immediately
+necessary in the next, a dedicated thread can be used.  This is a thread that
+remains idle until work is pushed to it, at which point it will process it,
+taking as much time as necessary, then signal back to the main thread that the
+work has been done.  Figure \ref{fig:conc:dedicated} shows this process.
+
+\begin{figure}[ht]
+    \centering
+    \begin{tikzpicture}[
+        rectangle/.style={minimum height = 1.5em},
+        point/.style={
+            circle, fill = black,
+            inner sep = 0px, minimum size = 0px,
+        },
+        engine/.style={
+            rectangle, draw, fill=white,
+            minimum width = 6.5em,
+        },
+        thread/.style={
+            rectangle, draw, fill=white,
+            minimum width = 18em,
+        },
+        arrow/.style={->, >={Stealth[round]}},
+    ]
+        \node (end0) [point] at (12,  0) {};
+        \node (end1) [point] at (12, -1) {};
+        \path (0,  0) edge[arrow] (end0);
+        \path (0, -1) edge[arrow] (end1);
+        \node (engine0) [engine] at (2.0, 0) {engine};
+        \node (engine1) [engine] at (4.5, 0) {engine};
+        \node (engine2) [engine] at (7.0, 0) {engine};
+        \node (engine3) [engine] at (9.5, 0) {engine};
+        \node (thread) [thread] at (6, -1) {thread};
+        \path (engine0.south) edge[arrow] (thread.north west);
+        \path (thread.north east) edge[arrow] (engine3.south);
+    \end{tikzpicture}
+    \caption{Dedicated thread}
+    \label{fig:conc:dedicated}
+\end{figure}
+
+\begin{lstlisting}[style=c]
+void thread(struct queue *q, struct event *e) {
+    for(;;) {
+        event_wait(e);
+        for(struct task t = {0}; queue_try_pop(q, &t);)
+            process_task(&t);
+    }
+}
+
+void engine(void) {
+    struct queue q = init_queue();
+    struct event e = init_event();
+    start_thread(thread, &q, &e);
+    for(;;) {
+        queue_push(&q, process_data());
+        event_signal(&e);
+    }
+}
+\end{lstlisting}
+
+\subsection{Task scheduler}
+
+\begin{lstlisting}[style=c]
+void thread(struct queue *q, struct event *e) {
+    for(;;) {
+        event_wait(e);
+        for(struct task t = 0; queue_try_pop(q, &t);)
+            process_task(&t);
+    }
+}
+
+void async(struct queue *q, struct event *e, struct task t) {
+    queue_push(q, t);
+    for(int i = 0; i < N_THREADS; ++i)
+        event_signal(e + i);
+}
+
+void engine(void) {
+    struct queue q = init_queue();
+    struct event e[N_THREADS] = {0};
+    for(int i = 0; i < N_THREADS; ++i) {
+        e[i] = init_event();
+        start_thread(thread, &q, e + i);
+    }
+    for(;;) {
+        async(q, e, task0());
+        async(q, e, task1());
+        async(q, e, task2());
+    }
+}
+\end{lstlisting}

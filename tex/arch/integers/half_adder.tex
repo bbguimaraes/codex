@@ -1,0 +1,16 @@
+\begin{tikzpicture}[{circuit_diagram}]
+    \node (xor) [xor gate] at (3, 1) {};
+    \node (and) [and gate] at (3, 0) {};
+    \node (sum)   at ($ (xor.output)  + (2em, 0) $) {S};
+    \node (carry) at ($ (and.output)  + (2em, 0) $) {C};
+    \node (au)    at ($ (xor.input 1) - (5em, 0) $) {AU};
+    \node (ad)    at ($ (xor.input 2) - (5em, 0) $) {AD};
+    \node (au0) [point] at ($ (au) + (3em, 0) $) {};
+    \node (ad0) [point] at ($ (ad) + (2em, 0) $) {};
+    \draw (au.east) -- (xor.input 1);
+    \draw (ad.east) -- (xor.input 2);
+    \draw (au.east) -- (au0) |- (and.input 1);
+    \draw (ad.east) -- (ad0) |- (and.input 2);
+    \draw (xor.output) -- (sum.west);
+    \draw (and.output) -- (carry.west);
+\end{tikzpicture}

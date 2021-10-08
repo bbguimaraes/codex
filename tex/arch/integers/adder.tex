@@ -1,0 +1,28 @@
+        \begin{tikzpicture}[{circuit_diagram}]
+            \node (xor1) [xor gate] at (9, 1) {};
+            \node (xor2) [xor gate] at (9, 0) {};
+            \node (xor0) [xor gate] at ($ (xor1.input 1) - (5em, 0) $) {};
+            \node (and)  [and gate] at ($ (xor2.input 1) - (5em, 0) $) {};
+            \node (sum)   at ($ (xor1.output)  + (2em, 0) $) {S};
+            \node (carry) at ($ (xor2.output)  + (2em, 0) $) {C};
+            \node (au)    at ($ (xor0.input 1) - (5em, 0) $) {AU};
+            \node (ad)    at ($ (xor0.input 2) - (5em, 0) $) {AD};
+            \node (c_in)  at ($ (ad) - (0, 4.5em) $) {C$_{in}$};
+            \node (au0) [point] at ($ (au) + (3em, 0) $) {};
+            \node (ad0) [point] at ($ (ad) + (2em, 0) $) {};
+            \node (cin0) [point] at ($
+                (0, 0)!(c_in)!(0, 1)
+                + (0, 0)!(xor1.input 1)!(1, 0)
+                - (2em, 0)
+            $) {};
+            \draw (au.east) -- (xor0.input 1);
+            \draw (ad.east) -- (xor0.input 2);
+            \draw (au.east) -- (au0) |- (and.input 1);
+            \draw (ad.east) -- (ad0) |- (and.input 2);
+            \draw (xor0.output) -- (xor1.input 1);
+            \draw ( and.output) -- (xor2.input 1);
+            \draw (cin0) |- (xor1.input 2);
+            \draw (c_in.east) -- ($ (cin0) + (1em, 0) $) |- (xor2.input 2);
+            \draw (xor1.output) -- (sum.west);
+            \draw (xor2.output) -- (carry.west);
+        \end{tikzpicture}

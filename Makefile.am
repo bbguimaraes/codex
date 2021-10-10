@@ -8,6 +8,7 @@ SUBDIRS = \
 	event_dispatcher \
 	lambda \
 	list \
+	math \
 	packet_reader \
 	popcount \
 	reflection \

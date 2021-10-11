@@ -1,0 +1,19 @@
+\begin{tikzpicture}[{circuit_diagram}]
+    \node (and)  [and gate] {};
+    \node (xnor) [xnor gate] at ($ (and.input 1) + (-6em, +1em) $) {};
+    \node (xor)  [xor gate]  at ($ (and.input 2) + (-6em, -1em) $) {};
+    \node (o) at ($ (and.output) + (2em, 0) $) {O};
+    \node (r) at ($ (xor.input 2) - (2em, 0) $) {R};
+    \node (x) at ($ (xnor.input 1) - (2em, 0) $) {X};
+    \node (y0) [point]
+        at ($ (0, 0)!(x.east)!(1, 0) + (0, 0)!(xnor.input 2)!(0, 1) $) {};
+    \node (y) at ($ (y0) - (2em, 0) $) {Y};
+    \draw (r) -- (xor.input 2);
+    \draw (x) -- (xnor.input 1);
+    \draw (y) -- (y0);
+    \draw (y0) -- (xnor.input 2);
+    \draw (y0) |- (xor.input 1);
+    \draw (xnor.output) -- ($ (xnor) + (4em, 0) $) |- (and.input 1);
+    \draw (xor.output)  -- ($ (xor)  + (4em, 0) $) |- (and.input 2);
+    \draw (and.output) -- (o.west);
+\end{tikzpicture}

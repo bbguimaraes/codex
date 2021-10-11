@@ -1,0 +1,20 @@
+\begin{tikzpicture}[{circuit_diagram}]
+    \node (xor) [xor gate] at (3, 1) {};
+    \node (and) [and gate] at (3, 0) {};
+    \node (not)
+        [not gate,circuit symbol unit = 0.4em]
+        at ($ (and.input 1) - (1.25em, 0) $) {};
+    \node (diff) at ($ (xor.output)  + (2em, 0) $) {D};
+    \node (borr) at ($ (and.output)  + (2em, 0) $) {B};
+    \node (min)  at ($ (xor.input 1) - (5em, 0) $) {M};
+    \node (sub)  at ($ (xor.input 2) - (5em, 0) $) {S};
+    \node (min0) [point] at ($ (min) + (3em, 0) $) {};
+    \node (sub0) [point] at ($ (sub) + (2em, 0) $) {};
+    \draw (min.east) -- (xor.input 1);
+    \draw (sub.east) -- (xor.input 2);
+    \draw (not.output) -- (and.input 1);
+    \draw (min.east) -- (min0) |- (not.input);
+    \draw (sub.east) -- (sub0) |- (and.input 2);
+    \draw (xor.output) -- (diff.west);
+    \draw (and.output) -- (borr.west);
+\end{tikzpicture}

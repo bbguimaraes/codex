@@ -261,3 +261,115 @@ i.e. ignoring the carry --- effects modular arithmetic.  Listing
     not have to wait for the carry to go through each digit in the group to be
     propagated.
 \end{aside}
+
+\subsubsection{Subtraction}
+
+\label{subsubsec:arch:sub}
+
+Subtraction is in many ways analogous to addition: a \textit{minuend},
+\textit{subtrahend}, and a \textit{borrow} are combined to produce the
+\textit{difference} and the subsequent borrow for each bit, and the last output
+borrow affects the carry flag (also called the \textit{borrow flag}.  In fact,
+because of modular arithmetic, the computation of the difference for one-digit
+binary numbers is exactly the same as that of the sum (figure
+\ref{fig:arch:half_subtractor}).  Computing the borrow also uses an \textit{and}
+gate but requires an extra \textit{not} gate.  Figure \ref{fig:arch:subtractor}
+shows the full subtractor\footnotemark.
+
+\footnotetext{
+    Some architectures take advantage of the arithmetic properties described in
+    section \secref{subsec:arch:ones_twos_comp} to implement addition and
+    subtraction using the same circuit with just a few extra switches to
+    pre-process the input values.}
+
+\begin{figure}[ht]
+    \centering
+    \begin{subfigure}[h]{0.3\textwidth}
+        \begin{tabular}{cc|cc}
+            \multicolumn{2}{c|}{Input} &
+            \multicolumn{2}{c}{Output} \\
+            M & S & D & B \\
+            \hline
+            0 & 0 & 0 & 0 \\
+            0 & 1 & 1 & 1 \\
+            1 & 0 & 1 & 0 \\
+            1 & 1 & 0 & 0 \\
+        \end{tabular}
+    \end{subfigure}
+    \begin{subfigure}[h]{0.3\textwidth}
+        \input{arch/integers/half_subtractor.tex}
+    \end{subfigure}
+    \caption{One-digit binary half subtractor}
+    \label{fig:arch:half_subtractor}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \begin{subfigure}[h]{0.3\textwidth}
+        \begin{tabular}{ccc|cc}
+            \multicolumn{3}{c|}{Input} &
+            \multicolumn{2}{c}{Output} \\
+            M & S & B$_{in}$ & D & B \\
+            \hline
+            0 & 0 & 0 & 0 & 0 \\
+            0 & 1 & 0 & 1 & 1 \\
+            1 & 0 & 0 & 1 & 0 \\
+            1 & 1 & 0 & 0 & 0 \\
+            \hline
+            0 & 0 & 1 & 1 & 1 \\
+            0 & 1 & 1 & 0 & 1 \\
+            1 & 0 & 1 & 0 & 0 \\
+            1 & 1 & 1 & 1 & 1 \\
+        \end{tabular}
+    \end{subfigure}
+    \begin{subfigure}[h]{0.65\textwidth}
+        \input{arch/integers/subtractor.tex}
+    \end{subfigure}
+    \caption{One-digit binary subtractor}
+    \label{fig:arch:subtractor}
+\end{figure}
+
+Listing \ref{lst:arch:sub_mod} shows examples of subtraction with 4-bit
+integers.  As is the case with addition with carry, subtraction with borrow of
+binary numbers has the peculiarity that borrowing can also be seen as a bit
+flip, as \texttt{1} is the maximum value a digit can have.  Thus, when 1 is
+subtracted from a binary number, all lower \texttt{0}s are turned into
+\texttt{1}s and the lower \texttt{1} is turned into \texttt{0}.  In other words,
+all bits up to and including the lowest \texttt{1} are flipped.  If there is no
+bit set --- i.e.  the minuend is zero --- all bits are turned into
+\texttt{1}s\footnotemark.  Digits above the lower \texttt{1} are unchanged.
+
+\begin{figure}[ht]
+    \begin{lstlisting}[
+        caption=Subtraction with modular arithmetic,
+        label=lst:arch:sub_mod,
+        xleftmargin=0.2\textwidth,
+    ]
+ 0b0111 = 7    0b1100 = 12      0b0010 = 2
+-0b0011 = 3   +0b0001 =  1     -0b0100 = 4
+-------       -------          -------
+      0             1 borrow         0
+     0             1                1
+    1             0                1   borrow
+-------          1                1
+ 0b0100 = 4   -------          -------
+               0b1011 = 11     0b11110 = 30
+                               0b1     = 30 / 16
+                                       = 30 >> 4
+                                       = 1 (borrow flag)
+                               0b 1110 = 30 % 16
+                                       = 30 & 0xf
+                                       = 14
+    \end{lstlisting}
+\end{figure}
+
+\footnotetext{
+    The final value of course depends on the number representation of a
+    particular system.  In abstract terms, the \texttt{1}s extend to infinity.
+    In a real and finite ALU, all bits in the output register are set to
+    \texttt{1}, effecting modular arithmetic.  The carry flag is also set,
+    allowing the CPU to handle this underflow case in a variety of ways.}
+
+\subsection{One's and two's complement}
+
+\label{subsec:arch:ones_twos_comp}

@@ -1,0 +1,61 @@
+\begin{tikzpicture}[{circuit_diagram}]
+    \node (xor1) [xor gate] at (8, 1) {};
+    \node (or)   [or  gate] at (8, 0) {};
+    \node (and1) [and gate] at ($ (or.input 2) - (5em, 1em) $) {};
+    \node (not1)
+        [not gate,circuit symbol unit = 0.4em]
+        at ($ (and1.input 1) - (1.5em, 0) $) {};
+    \node (d0) [point] at ($
+        (-1em, 0)
+        + (0, 0)!(not1.input)!(1, 0)
+        + (0, 0)!(xor1.input 1)!(0, 1)
+    $) {};
+    \node (xor0) [xor gate] at ($
+        (-2.5em, 0)
+        + (0, 0)!(d0)!(1, 0)
+        + (0, 0)!(xor1.input 1)!(0, 1)
+    $) {};
+    \node (and0) [and gate] at ($
+        (0, 0)!(xor0)!(1, 0)
+        + (0, 0)!(or.input 1)!(0, 1)
+    $) {};
+    \node (not0)
+        [not gate,circuit symbol unit = 0.4em]
+        at ($ (and0.input 1) - (1.5em, 0) $) {};
+    \node (diff) at ($ (xor1.output)  + (2em, 0) $) {D};
+    \node (borr) at ($ (  or.output)  + (2em, 0) $) {B};
+    \node (min)  at ($ (xor0.input 1) - (6em, 0) $) {M};
+    \node (sub)  at ($ (xor0.input 2) - (6em, 0) $) {S};
+    \node (b_in) at ($
+        (0, -2.75em)
+        + (0, 0)!(sub)!(1, 0)
+        + (0, 0)!(or.input 2)!(0, 1)
+    $) {B$_{in}$};
+    \node (min0) [point] at ($ (min) + (3em, 0) $) {};
+    \node (sub0) [point] at ($ (sub) + (2em, 0) $) {};
+    \node (bin0) [point] at ($
+        (0, 0)!(d0)!(1, 0) + (0, 0)!(b_in)!(0, 1)
+    $) {};
+    \draw (min.east)  -- (xor0.input 1);
+    \draw (sub.east)  -- (xor0.input 2);
+    \draw (min.east)  -- (min0) |- (not0.input);
+    \draw (sub.east)  -- (sub0) |- (and0.input 2);
+    \draw (not0.output) -- (and0.input 1);
+    \draw (xor0.output) -- (xor1.input 1);
+    \draw (and0.output) -- (  or.input 1);
+    \draw (and1.output)
+        -- ($ (and1.output) + (1em, 0) $)
+        |- (or.input 2);
+    \draw (bin0) |- (and1.input 2);
+    \draw (d0)   |- (not1.input);
+    \draw (not1.output) -- (and1.input 1);
+    \draw (b_in.east)
+        -- ($
+            (-0.75em, 0)
+            + (0, 0)!(xor1.input 2)!(1, 0)
+            + (0, 0)!(b_in)!(0, 1)
+        $)
+        |- (xor1.input 2);
+    \draw (xor1.output) -- (diff.west);
+    \draw (  or.output) -- (borr.west);
+\end{tikzpicture}

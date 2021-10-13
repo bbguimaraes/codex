@@ -42,6 +42,7 @@ AC_CONFIG_FILES([
     packet_reader/Makefile
     popcount/Makefile
     reflection/Makefile
+    sort/Makefile
     time/Makefile
     yaml/Makefile])
 AC_OUTPUT

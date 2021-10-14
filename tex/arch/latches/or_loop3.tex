@@ -1,0 +1,18 @@
+\begin{tikzpicture}[{circuit_diagram}]
+    \node (or) [or gate] {};
+    \node (in) [left = of or.input 1, xshift = 1em] {I};
+    \node (or0) [point, right = of or, xshift = -2em] {};
+    \node (out) [right = of or0, xshift = -2em] {O};
+    \draw (in) -- (or.input 1);
+    \draw [red, thick] (or.output) -- (or0);
+    \draw [red, thick] (or0) -- (out);
+    \draw [red, thick] (or0)
+        -- ($
+            (0, -0.6)
+            + (0, 0)!(or0)!(1, 0)
+            + (0, 0)!(or.input 2)!(0, 1)
+        $)
+        -- ($ (or.input 2) - (0.4, 0.6) $)
+        -- ($ (or.input 2) - (0.4, 0) $)
+        -- (or.input 2);
+\end{tikzpicture}

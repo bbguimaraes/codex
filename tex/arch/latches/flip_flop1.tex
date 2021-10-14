@@ -1,0 +1,22 @@
+\begin{tikzpicture}[scale = 0.75, circuit logic CDH, huge circuit symbols]
+    \node (q)  at (0, 2) {Q};
+    \node (nq) at (0, 0) {$\bar{\text{Q}}$};
+    \node (nor0) [nor gate, left = of q] {};
+    \node (nor1) [nor gate, left = of nq] {};
+    \node (p0) [point, right = of nor0.output, xshift = -1.75em] {};
+    \node (p1) [point, right = of nor1.output, xshift = -1.75em] {};
+    \node (r) [left = of nor0.input 1, xshift = 1em] {R};
+    \node (s) [left = of nor1.input 2, xshift = 1em] {S};
+    \draw [red, thick] (r) -- (nor0.input 1);
+    \draw (s) -- (nor1.input 2);
+    \draw [red, thick] (p0)
+        -- ($ (nor1.input 1) + (-1em, 1em) $)
+        -- ($ (nor1.input 1) - (1em, 0) $)
+        -- (nor1.input 1);
+    \draw (p1)
+        -- ($ (nor0.input 2) - (1em, 1em) $)
+        -- ($ (nor0.input 2) - (1em, 0) $)
+        -- (nor0.input 2);
+    \draw [red, thick] (nor0.output) -- (q);
+    \draw (nor1.output) -- (nq);
+\end{tikzpicture}

@@ -1,0 +1,41 @@
+\begin{tikzpicture}[circuit logic CDH, huge circuit symbols]
+    \node (q)  at (6, 2) {Q};\node (nq) at (6, 0) {$\bar{\text{Q}}$};
+    \node (nor0) [nor gate, left = of q] {};
+    \node (nor1) [nor gate, left = of nq] {};
+    \node (and0) [and gate, left = of nor0.input 1, xshift = 1em] {R};
+    \node (and1) [and gate, left = of nor1.input 2, xshift = 1em] {S};
+    \node (p0) [point, right = of nor0.output, xshift = -1.75em] {};
+    \node (p1) [point, right = of nor1.output, xshift = -1.75em] {};
+    \node (not) [
+        not gate, circuit symbol unit = 0.4em,
+        left = of and0.input 1, xshift = 1em,
+    ] {};
+    \node (d0) [point] at (0, 1) {};
+    \node (d) [left = of d0, xshift = 2em] {D};
+    \node (en0) [point] at (1.25, 1) {};
+    \node (en) [left = of en0, xshift = 2em] {EN};
+    \draw (d) -- (d0);
+    \draw (d0) |- (not) -- (and0.input 1);
+    \draw (d0) |- (and1.input 2);
+    \draw (en) -- (en0);
+    \draw (en0) |- (and0.input 2);
+    \draw (en0) |- (and1.input 1);
+    \draw (and0) -- (nor0.input 1);
+    \draw (and1) -- (nor1.input 2);
+    \draw (p0)
+        -- ($ (nor1.input 1) + (-1em, 1em) $)
+        -- ($ (nor1.input 1) - (1em, 0) $)
+        -- (nor1.input 1);
+    \draw (p1)
+        -- ($ (nor0.input 2) - (1em, 1em) $)
+        -- ($ (nor0.input 2) - (1em, 0) $)
+        -- (nor0.input 2);
+    \draw (nor0.output) -- (q);
+    \draw (nor1.output) -- (nq);
+    \draw[-, dotted]
+        ($ (and1)    + (-0.75em, -1.50em) $)
+        -- node[below] {latch} +(12.25em, 0)
+        -- ($ (and0) + (11.50em,  1.50em) $)
+        -- ($ (and0) + (-0.75em,  1.50em) $)
+        -- ($ (and1) + (-0.75em, -1.50em) $);
+\end{tikzpicture}

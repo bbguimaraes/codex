@@ -43,10 +43,16 @@ void test(auto sort) {
 }
 
 void SortTest::selection_data(void) { data(); }
+void SortTest::insertion_data(void) { data(); }
 
 void SortTest::selection(void) {
     test<std::forward_list<int>>(
         [](auto b, auto e) { codex::selection_sort(b, e); });
+}
+
+void SortTest::insertion(void) {
+    test<std::list<int>>(
+        [](auto b, auto e) { codex::insertion_sort(b, e); });
 }
 
 QTEST_MAIN(SortTest)

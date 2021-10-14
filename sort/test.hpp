@@ -8,6 +8,8 @@ class SortTest : public QObject {
 private slots:
     void selection_data(void);
     void selection(void);
+    void insertion_data(void);
+    void insertion(void);
 };
 
 #endif

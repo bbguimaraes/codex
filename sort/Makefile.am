@@ -13,6 +13,7 @@ check_PROGRAMS = test
 endif
 
 noinst_HEADERS = \
+	insertion.hpp \
 	selection.hpp \
 	test.hpp \
 	test.cpp
@@ -22,6 +23,7 @@ check_CXXFLAGS = -fPIC -fsanitize=address,undefined
 test_CXXFLAGS = $(AM_CXXFLAGS) $(TEST_DEPS_CFLAGS) $(check_CXXFLAGS)
 test_LDFLAGS = $(AM_LDFLAGS) $(TEST_DEPS_LIBS)
 test_SOURCES = \
+	insertion.cpp \
 	selection.cpp \
 	test.cpp \
 	test.moc.cpp

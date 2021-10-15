@@ -435,6 +435,67 @@ circuit that multiplies two 2-bit numbers.
     \label{fig:arch:mul}
 \end{figure}
 
+\subsubsection{Division}
+
+Division is the most complex of the simple arithmetic operations, although, as
+is the case for the other operations, it is considerably simpler in binary.
+Similarly to multiplication, the division of a \textit{dividend} by a
+\textit{divisor} follows the long division algorithm also used for decimal
+numbers (listing \ref{lst:arch:div}).
+
+\begin{figure}[ht]
+    \begin{lstlisting}[
+        caption={Binary division},
+        label=lst:arch:div,
+    ]
+ 0b11000101 = 197     0b11000101 = 197              0b11000101 = 197
+/0b00001010 =  10    >0b1010     = 160 = 10 << 4   -0b1010     = (10 << 4) * q0
+-----------          -----------                   -----------
+        0b1   (q4)    0b00000001 =   1 (q0)         0b00100101 = 37 = 197 % 160
+       0b1    (q3)
+      0b0     (q2)     0b0100101 =  37               0b100101 = 37
+     0b0      (q1)    >0b1010    =  80 = 10 << 3    -0b000000 = (10 << 3) * q1
+   +0b1       (q0)   -----------                    ---------
+-----------            0b0000000 =   0 (q1)          0b100101 = 37 = 37 % 80
+ q: 0b11011 =  19
+ r: 0b00111 =   7       0b100101 =  37               0b100101 = 37
+                       >0b1010   =  40 = 10 << 2    -0b000000 = (10 << 2) * q2
+                      ----------                    ---------
+                       0b0000000 =   0 (q2)          0b100101 = 37 = 37 % 40
+
+                        0b100101 =  37               0b100101 = 37
+                       >0b 1010  =  20 = 10 << 1    -0b010100 = (10 << 1) * q3
+                       ---------                    ---------
+                        0b000001 =   1 (q3)          0b010001 = 17 = 37 % 20
+
+                         0b10001 =  17                0b10001 = 17
+                        >0b 1010 =  10 = 10 << 0     -0b 1010 = (10 << 0) * q4
+                        --------                     --------
+                         0b00001 =   1 (q4)           0b00111 =  7 = 37 % 10 (r)
+    \end{lstlisting}
+\end{figure}
+
+First, the divisor is left-aligned with the dividend: a shift operation based on
+the width of its value.  It is then compared to the corresponding most
+significant bits of the dividend to determine if it is greater than or equal to
+it.  The result of the comparison, zero or one, is the first bit of the
+quotient.  That bit is multiplied by the divisor (which, as we have seen in the
+multiplication case, is either zero or the divisor unchanged) and subtracted
+from the portion of the dividend that was used in the comparison.
+
+This process is repeated, with both the quotient and the dividend being shifted
+up by one position at each iteration, until all bits in the dividend have been
+processed (i.e. it is right-aligned with the divisor).  The remainder is
+whatever is left in the most significant part of the dividend after the last
+subtraction.
+
+This process is significantly more complicated than the previous arithmetic
+operations as it requires iteration and comparisons, has a variable number of
+steps (depending on the width of the \emph{value} of the dividend/divisor), and
+each step is dependent on the result of the previous.  Still, it is
+fundamentally composed of the same simple operations used throughout this
+section.
+
 \subsection{One's and two's complement}
 
 \label{subsec:arch:ones_twos_comp}

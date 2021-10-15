@@ -370,6 +370,71 @@ bit set --- i.e.  the minuend is zero --- all bits are turned into
     \texttt{1}, effecting modular arithmetic.  The carry flag is also set,
     allowing the CPU to handle this underflow case in a variety of ways.}
 
+\begin{figure}[ht]
+    \begin{lstlisting}[
+        caption={Binary multiplication},
+        label=lst:arch:uint_mul,
+        xleftmargin=0.2\textwidth,
+    ]
+    0b0110 =  6          0b0110 =  6 =   6 << 0
+   *0b0011 =  3         &0b1111 = 15 = ~(3 >> 0) + 1
+----------              -------
+    0b0110 =  6 (p0)     0b0110 =  6 (p0)
+   0b0110  = 12 (p1)
+  0b0000   =  0 (p2)     0b1100 = 12 =   6 << 1
++0b0000    =  0 (p3)    &0b1111 = 15 = ~(3 >> 1) + 1
+----------              -------
+0b00010010 = 18          0b1100 = 12 (p1)
+
+                        0b11000 = 24 =   6 << 2
+                       &0b00000 =  0 = ~(3 >> 2) + 1
+                        -------
+                        0b00000 =  0 (p2)
+
+                       0b110000 = 48 =   6 << 3
+                      &0b000000 =  0 = ~(3 >> 3) + 1
+                       --------
+                       0b000000 =  0 (p3)
+    \end{lstlisting}
+\end{figure}
+
+\subsubsection{Multiplication}
+
+The computation of the product of two binary numbers can be separated in several
+stages (listing \ref{lst:arch:uint_mul}).  For a binary number of $n$ digits,
+the \textit{multiplicand} is first multiplied by each digit of the
+\textit{multiplier}, generating $n$ \textit{partial products}.  As with the
+carry bit in addition, this is a simple \textit{and} operation, and the result
+is all zeroes or the multiplicand unchanged, depending on whether the multiplier
+bit is \texttt{0} or \texttt{1}.
+
+The partial products are then multiplied according to the degree of the
+multiplier digit that generated them.  Just as with any base, this is a shift
+operation for binary numbers.  This also means multiplication, at least from
+this point on, has to be done using integers of twice the width of its inputs.
+In hardware or software this usually means the destination is either a single
+element of a larger type or two elements of the same type as the input (e.g. an
+area of a register with twice the width or two separate registers of the same
+width).
+
+The final product is the sum of all $n$ partial products.  This is analogous to
+the long multiplication method for decimal numbers, but simpler since all
+operations on binary numbers can be reduced to logical or shift operations.
+Simple architectures reuse the shifter and adder to accumulate partial products
+one-by-one.  Faster multipliers have extra circuitry to compute partial products
+in parallel and sum them together.  Figure \ref{fig:arch:mul} shows a simple
+circuit that multiplies two 2-bit numbers.
+
+\begin{figure}[ht]
+    \centering
+    \hspace{2em}
+    \begin{subfigure}[h]{0.65\textwidth}
+        \input{arch/integers/mul.tex}
+    \end{subfigure}
+    \caption{Binary multiplication}
+    \label{fig:arch:mul}
+\end{figure}
+
 \subsection{One's and two's complement}
 
 \label{subsec:arch:ones_twos_comp}
@@ -577,6 +642,15 @@ descriptions in the previous sections.
         circuit can be built with a switch that will complement the second
         argument and set the carry flag, allowing it to perform additions and
         subtractions while sharing most of the logic.
+    \item[Multiplication]
+        requires just a few changes to work with integers in two's complement.
+        Listing \ref{lst:arch:mul} expands listing \ref{lst:arch:uint_mul} to
+        show cases where the multiplicand and/or the multiplier are negative.
+        For the former case, the partial products are unchanged, but products
+        must be sign-extended to the full width of the resulting type when they
+        are added.  For the latter, the partial product resulting from the most
+        significant bit of the multiplier is negated, in accordance with the
+        digit sum formula for two's complement integers presented earlier.
 \end{description}
 
 \subsubsection{Overflow flag}
@@ -636,4 +710,54 @@ output\footnotemark.
     \hfill
     \caption{Overflow flag}
     \label{fig:arch:overflow_flag}
+\end{figure}
+
+\begin{figure}[p]
+    \begin{lstlisting}[
+        caption={Signed binary multiplication},
+        label=lst:arch:mul,
+        xleftmargin=0.175\textwidth,
+    ]
+     0b0100 =   4             0b0100 =   4 =    4 << 0
+    *0b1101 =  -3            &0b1111 =   1 = ~(-3 >> 0) + 1
+ ----------                  -------
+     0b0100 =   4 (p0)        0b0100 =   4 (p0)
+    0b0000  =   0 (p1)
+ + 0b0100   =  16 (p2)        0b1000 =   8 =    4 << 1
+ -0b0100    =  32 (p3)       &0b0000 =   0 = ~(-3 >> 1) + 1
+ ----------                  -------
+    0b10100 =  20             0b0000 =   0 (p1)
+ -0b0100000 =  32
+ ----------                 0b100000 =  16 =    4 << 2
+ 0b11110100 = -12          &0b111111 =   1 = ~(-3 >> 2) + 1
+                           ---------
+                            0b100000 =  16 (p2)
+
+                          0b10000000 =  32 =    4 << 3
+                         &0b11111111 =   1 = ~(-3 >> 3) + 1
+                         -----------
+                          0b10000000 =  32 (p3)
+
+
+
+     0b1100 =  -4             0b1100 =  -4 =  -4 << 0
+    *0b1101 =  -3            &0b1111 =  15 = ~(-3 >> 0) + 1
+ ----------                  -------
+ 0b11111100 =  -4             0b1100 =  -4 (p0)
+    0b0000  =   0
++0b111100   = -16            0b11000 =  -8 =   -4 << 1
+-0b11100    = -32           &0b00000 =   0 = ~(-3 >> 1) + 1
+ ----------                 --------
+ 0b11101100 = -20            0b00000 =   0 (p1)
+-0b11100000 = -32
+ ----------                 0b110000 = -16 =  -4 << 2
+ 0b00001100 =  12          &0b111111 =  31 = ~(-3 >> 2) + 1
+                           ---------
+                            0b110000 = -16 (p2)
+
+                           0b1100000 = -32 =  -4 << 3
+                          &0b1111111 =  63 = ~(-3 >> 3) + 1
+                          ----------
+                           0b1100000 = -32 (p3)
+    \end{lstlisting}
 \end{figure}

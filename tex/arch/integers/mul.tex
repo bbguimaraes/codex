@@ -1,0 +1,85 @@
+\begin{tikzpicture}[{circuit_diagram}]
+    \node (o3) at (12, 0) {O$_3$};
+    \node (o2) at (12, 1) {O$_2$};
+    \node (o1) at (12, 2) {O$_1$};
+    \node (o0) at (12, 3) {O$_0$};
+    \node (s3) [and gate] at ($ (o3) - (4em, 0) $) {S$_3$};
+    \node (s2) [xor gate] at ($ (o2) - (4em, 0) $) {S$_2$};
+    \node (s1) [xor gate] at ($ (o1) - (4em, 0) $) {S$_1$};
+    \node (s0) [and gate] at ($ (o0) - (4em, 0) $) {S$_0$};
+    \node (c1_0) [point] at ($
+        (-1em, 0)
+        + (0, 0)!(s3.input 1)!(1, 0)
+        + (0, 0)!(s2.input 1)!(0, 1)
+    $) {};
+    \node (p1_1_0) [point] at ($ (s3.input 2) - (2em, 0) $) {};
+    \node (p1_1) [and gate] at ($ (p1_1_0) - (3em, 0) $) {P1$_1$};
+    \node (c1) [and gate] at ($
+        (0, 0)
+        + (0, 0)!(p1_1)!(1, 0)
+        + (0, 0)!(c1_0)!(0, 1)
+    $) {C$_1$};
+    \node (p1_0_0) [point] at ($ (c1.input 2) - (2em, 0) $) {};
+    \node (p1_0) [and gate] at ($ (p1_0_0) - (3em, 0) $) {P1$_0$};
+    \node (p0_1_0) [point] at ($
+        (-1em, 0)
+        + (0, 0)!(c1.input 1)!(1, 0)
+        + (0, 0)!(s1.input 1)!(0, 1)
+    $) {};
+    \node (p0_1) [and gate] at ($
+        (0, 0)
+        + (0, 0)!(p1_0)!(1, 0)
+        + (0, 0)!(p0_1_0)!(0, 1)
+    $) {P0$_1$};
+    \node (x0_0) [point] at ($
+        (-1em, 0)
+        + (0, 0)!(p1_0.input 1)!(1, 0)
+        + (0, 0)!(s0.input 1)!(0, 1)
+    $) {};
+    \node (x0) [left = of x0_0, xshift = 1em] {X$_0$};
+    \node (y1_0) [point] at ($
+        (0, 0)!(x0_0)!(1, 0)
+        + (0, 0)!(p1_1.input 2)!(0, 1)
+    $) {};
+    \node (y1) [left = of y1_0, xshift = 1em] {Y$_1$};
+    \node (x1_0) [point] at ($
+        (-1em, 0)
+        + (0, 0)!(y1_0)!(1, 0)
+        + (0, 0)!(p1_1.input 1)!(0, 1)
+    $) {};
+    \node (x1) [left = of x1_0] {X$_1$};
+    \node (y0_0) [point] at ($
+        (-1em, 0)
+        + (0, 0)!(x0_0)!(1, 0)
+        + (0, 0)!(s0.input 2)!(0, 1)
+    $) {};
+    \node (y0) [left = of y0_0] {Y$_0$};
+    \draw (x0) -- (x0_0);
+    \draw (x1) -- (x1_0);
+    \draw (y0) -- (y0_0);
+    \draw (y1) -- (y1_0);
+    \draw (x0_0) -- (s0.input 1);
+    \draw (y0_0) -- (s0.input 2);
+    \draw (y0_0) |- (p0_1.input 1);
+    \draw (x1_0) |- (p0_1.input 2);
+    \draw (x0_0) |- (p1_0.input 1);
+    \draw (y1_0) |- (p1_0.input 2);
+    \draw (x1_0) -- (p1_1.input 1);
+    \draw (y1_0) -- (p1_1.input 2);
+    \draw (p0_1.output) -- (p0_1_0);
+    \draw (p1_0.output) -- (p1_0_0);
+    \draw (p1_1.output) -- (p1_1_0);
+    \draw (p0_1_0) -- (s1.input 1);
+    \draw (p1_0_0) |- (s1.input 2);
+    \draw (p0_1_0) |- (c1.input 1);
+    \draw (p1_0_0) -- (c1.input 2);
+    \draw (c1.output) -- (c1_0);
+    \draw (c1_0) -- (s2.input 1);
+    \draw (p1_1_0) |- (s2.input 2);
+    \draw (c1_0) |- (s3.input 1);
+    \draw (p1_1_0) -- (s3.input 2);
+    \draw (s0.output) -- (o0);
+    \draw (s1.output) -- (o1);
+    \draw (s2.output) -- (o2);
+    \draw (s3.output) -- (o3);
+\end{tikzpicture}

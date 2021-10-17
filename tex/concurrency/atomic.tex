@@ -1,0 +1,769 @@
+\section{Atomic operations}
+
+\label{sec:conc:atomic}
+
+Section \secref{sec:conc:consistency} described several memory consistency
+models adopted by different architectures.  It also briefly described how weaker
+models provide specialized instructions to selectively and temporarily impose
+stronger guarantees.  This section will present these operations, collectively
+called \textit{atomic operations}, in more detail.
+
+\subsection{Basic properties}
+
+\label{subsec:conc:atomic_prop}
+
+The term ``atomic'' is commonly (and often ambiguously) used to refer to several
+different aspects of the underlying machine concepts and operations, each
+explained in more detail in the following sections.
+
+\subsubsection{\texttt{volatile}}
+
+\texttt{volatile} type qualifiers act as compiler barriers, inhibiting most
+optimizations.  ``Volatile'' is the name of a type qualifier (similar to
+\texttt{const}) used in C/++ to indicate that a variable may be modified by
+processes external to the thread of execution presented to the compiler, such as
+external hardware or other operating system threads\footnotemark.  They prevent
+the compiler from reordering loads and stores and from performing optimizations
+such as read/write coalescing.
+
+\footnotetext{
+    \texttt{volatile} can have different meanings in other languages and even
+    compilers.  In Java, it means sequential consistency (similar to operations
+    on \texttt{std::atomic} types in C++ without explicit memory ordering).
+    Microsoft's compiler adds non-standard acquire/release semantics to
+    loads/stores (unconditionally in older versions, now, by default).}
+
+In some architectures, this is sufficient to implement relaxed atomic operations
+(see below) for common types\footnotemark.  For this reason, it is found often
+in platform-specific code which predates the C/++ 11 memory model.  When
+available, the atomic types introduced by that model are preferred, as they
+offer more control over which optimizations the compiler is allowed to perform.
+Code which uses \texttt{volatile} also often has to resort to more expensive,
+general fence instructions instead of the specific acquire/release operations
+available in some architectures.
+
+\footnotetext{
+    E.g. the \texttt{READ\_ONCE} and \texttt{WRITE\_ONCE} macros in the Linux
+    kernel, which have relaxed ordering but guaranteed atomicity, are
+    essentially \texttt{volatile} loads/stores.  See also
+    \texttt{process/volatile-considered-harmful.rst} in the kernel
+    documentation.}
+
+\subsubsection{Atomic loads/stores}
+
+These provide safe reads and writes by multiple threads.  These are special
+(depending on the architecture) load/store operations which are guaranteed to be
+performed indivisibly.  An external observer will either not see them, or see
+their result in its entirety: no partial result is allowed.  In some
+architectures, such as x86, unadorned loads and stores up to a given size and
+properly aligned behave in this way.  In other cases, specialized instructions
+or external synchronization may be required to avoid torn loads/stores.
+
+In languages such as C/++ which provide low-level control of the memory ordering
+of atomic operations, regular atomic loads/stores that \emph{do not} impose any
+ordering (i.e. are used just for their atomicity property) are called
+\textit{relaxed} atomic operations.  While inter-thread synchronization requires
+ordering constraints, relaxed atomic operations are useful in cases where no
+synchronization is needed or it is already provided via other means.
+
+\subsubsection{Acquire/release semantics}
+
+The main mechanism for memory ordering with atomic instructions in programming
+languages are operations with \textit{acquire/release semantics}, which are
+counterparts that constrain the reordering of operations and synchronize memory
+accesses across threads.
+
+\begin{description}
+    \item[Release semantics]
+        prevent reordering of operations preceding the atomic operation with
+        itself.  Other processors are guaranteed to see the result of the
+        preceding operations before succeeding operations.
+    \item[Acquire semantics]
+        prevent reordering of operations succeeding the atomic operation with
+        itself.  Other processors are guaranteed to see the result of the
+        succeeding operations before preceding operations.
+\end{description}
+
+Note that each of these guarantees is unidirectional: operations can be moved
+down or up \emph{inside} a critical section.  Normally, this is
+counterproductive since it increases contention but may be beneficial when
+combined with other optimizations.
+
+Acquire and release semantics are an important building block of concurrent
+algorithms because of their transitivity.  This means they can be a hidden
+implementation detail of certain operations that in turn can be thought of as
+themselves having acquire/release semantics.  Algorithms can then be built using
+those operations and reasoned about at a higher level.
+
+The most common example is starting and joining threads.  A function such as
+\texttt{pthread\-\_create} has release semantics, meaning all memory accesses
+are guaranteed to be seen by the thread that is being started.  Equivalently,
+\texttt{pthread\_join} has acquire semantics, meaning all memory accesses of the
+thread that just finished are guaranteed to be seen by the waiting thread.  This
+means algorithms where producers and consumers are separated by this type of
+fork-join boundary can often operate with no locks or even atomic operations at
+all: the implicit acquire/release semantics of starting and joining the worker
+threads is enough to guarantee safe access to shared data.
+
+A lock or mutex (v. section \secrefpar{subsec:conc:mutex}) is another common
+example: releasing a lock is done with release semantics so that operations in
+the critical section are guaranteed to be seen before the release, acquiring a
+lock is done with acquire semantics so that the acquisition is guaranteed to be
+seen before the operations in the critical section.
+
+\subsubsection{Fence/barrier instructions}
+
+These are machine instructions which establish memory ordering guarantees
+between different threads operating on the same data.  They are the low-level
+mechanism that enables acquire/release semantics.
+
+Some programming languages (such as C/++) provide fence operations in addition
+to the regular atomic types.  Acquire and release fences are similar to atomic
+operations with acquire and release semantics and provide similar guarantees.
+The one difference between them is an atomic operation is tied to the variable
+it is invoked on, so it prevents reorderings in relation to \emph{itself}; a
+fence has no attached variable, so it prevents reorderings in relation to
+\emph{all operations that precede or succeed it}, for acquire and release
+fences, respectively.
+
+\subsubsection{Read-modify-write}
+
+These operations are usually what is meant by ``atomic operations'' stricto
+sensu.  These combine atomic loads/stores and fence/barrier instructions to
+modify shared data safely in multiple threads.
+
+\subsection{Optimization}
+
+Single-threaded programs give the compiler and the hardware many opportunities
+to transform the operations as listed in source code to better exploit machine
+capabilities and achieve better performance.  It is worth analyzing these sorts
+of optimizations for a better understanding of why they have to be suppressed
+for the correct functioning of multi-threaded.  They will be described from the
+point of view of the compiler, but for the most part are equivalent --- at the
+source-code level --- to transformations done by other components at the
+hardware level.  Consult section \secref{sec:conc:consistency} for a detailed
+description of the fundamentals that make these transformations legal under
+traditional memory models.
+
+A compiler which encounters a series of redundant loads from a variable can
+decide to coalesce them to a single load:
+
+\begin{center}
+    \begin{tabular}{ccc}
+        \begin{lstlisting}[style=c]
+x = g;
+x = g;
+x = g;
+        \end{lstlisting}
+        & $\to$ &
+        \begin{lstlisting}[style=c]
+x = g;
+        \end{lstlisting} \\[1.25em]
+    \end{tabular}
+\end{center}
+
+This is because, in the absence of data races (which are expressively forbidden
+by language memory models), there are no legal ways in which the value of
+\texttt{g} could change between each load.  Similarly, multiple redundant stores
+to the same variable can be coalesced to a single store of the final value.
+These optimizations can affect control structures as well:
+
+\begin{center}
+    \begin{tabular}{ccc}
+        \begin{lstlisting}[style=c]
+while(g)
+    use(g);
+        \end{lstlisting}
+        & $\to$ &
+        \begin{lstlisting}[style=c]
+if(tmp = g)
+    for(;;)
+        use(g);
+        \end{lstlisting}
+    \end{tabular}
+\end{center}
+
+All of these cases are legal transformations because single-threaded behavior is
+maintained.  They are catastrophic in multi-threaded code, however, where shared
+data accesses are used for inter-thread communication.  Reorderings of this type
+must be prevented in some cases for an algorithm to function correctly.
+Conversely, it is desirable to do this \emph{only when necessary}.  These
+optimizations happen for a good reason, and excessive suppression can result in
+inefficient programs.  For example, the compiler might decide to make the
+following transformation:
+
+\begin{center}
+    \begin{tabular}{ccc}
+        \begin{lstlisting}[style=c]
+while(tmp = g)
+    use(tmp);
+        \end{lstlisting}
+        & $\to$ &
+        \begin{lstlisting}[style=c]
+while(g)
+    use(g);
+        \end{lstlisting}
+    \end{tabular}
+\end{center}
+
+This may happen due to register exhaustion; forbidding such transformation (e.g.
+by making \texttt{g} \texttt{volatile}) will result in \texttt{tmp} being
+spilled on the stack instead of the double load from \texttt{g}.  Also note
+that, although there was no code surrounding the relevant operations in these
+examples, optimizations of operations involving other variables may also be
+affected.
+
+Counter-intuitively, stores can also be added by the compiler, such as the
+following example, where a branch is removed with the addition of a second
+store:
+
+\begin{center}
+    \begin{tabular}{ccc}
+        \begin{lstlisting}[style=c]
+if(i)
+    g = i;
+else
+    g = 42;
+        \end{lstlisting}
+        & $\to$ &
+        \begin{lstlisting}[style=c]
+g = 42;
+if(i)
+    g = i;
+        \end{lstlisting}
+    \end{tabular}
+\end{center}
+
+\subsection{Wait-free queue}
+
+One of the fundamental constructs in multi-threaded code is the FIFO queue.
+Many problems are structure in some form of producer-consumer relation, and a
+queue is often a good mechanism for communication between them.  This section
+will demonstrate the use of atomic operations in the construction of concurrent
+queues of varying complexity.
+
+\begin{figure}[ht]
+    \centering
+    \begin{subfigure}[t]{0.5\textwidth}
+        \lstinputlisting[
+            style=c,
+            firstline=5,
+            label=lst:conc:queue_st,
+            caption={Single-threaded queue},
+        ]{concurrency/queue_st.c}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.45\textwidth}
+        \lstinputlisting[
+            style=c,
+            firstline=6,
+            label=lst:conc:queue_mtx,
+            caption={Queue with mutex},
+        ]{concurrency/queue_mtx.c}
+    \end{subfigure}
+\end{figure}
+
+\subsubsection{Single-threaded}
+
+For illustrative purposes, we start with an extremely constrained implementation
+(listing \ref{lst:conc:queue_st}), which
+\begin{enumerate*}[1)]
+    \item is not used concurrently,
+    \item only stores \texttt{int}s,
+    \item has a fixed size,
+    \item is either read- or write-only, and
+    \item can be read from / written to only once
+\end{enumerate*}
+
+All these restrictions are imposed so that this first implementation can be
+almost non-existent and serve as a base for the incremental addition of
+concurrent facilities.  Still, there are many scenarios in which a data buffer
+is read and/or written iteratively but received and/or sent in its entirety
+where this data structure is already useful.  As mentioned in the description of
+acquire/release semantics in section \secref{subsec:conc:atomic_prop}, the
+implicit guarantees of starting and joining threads is often enough to properly
+synchronize memory accesses in these cases.
+
+Other than the buffer where the data are stored, the only other member is an
+index into this buffer, the read/write pointer.  In both modes, checking if the
+queue is full ---  i.e. whether values can still be pushed/popped --- is simple,
+since this is a single-threaded queue.  In a read-only queue the only other
+operation is \texttt{pop}, which loads the current value and advances the
+pointer.  Conversely, in a write-only queue the only other operation is
+\texttt{push}, which stores the value and advances the pointer.
+
+\subsubsection{Read-/write-only}
+
+The first concurrent application we will examine is multiple producers or
+multiple consumers.  A queue is still read-/write-only, but multiple threads are
+now allowed to populate the buffer in parallel.  This presents a problem as the
+expression \texttt{q->i++}, even though it is a single statement in C, is
+composed of multiple operations.  Of relevance here is how the queue index is
+incremented in each function:
+
+\begin{multicols}{2}
+    \begin{lstlisting}[style=x86,showlines=true]
+push:
+    mov eax, [rdi]
+    lea edx, 1[rax]
+    mov [rdi], edx
+    mov 4[rdi+rax*4], esi
+    ret
+
+pop:
+    mov eax, [rdi]
+    lea edx, 1[rax]
+    mov eax, 4[rdi+rax*4]
+    mov [rdi], edx
+    mov [rsi], eax
+    ret
+
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=arm]
+push:
+        ldr r3, [r0]
+        add r2, r3, #1
+        add r3, r0, r3, lsl #2
+        str r2, [r0]
+        str r1, [r3, #4]
+        bx  lr
+pop:
+        ldr r3, [r0]
+        add r2, r0, r3, lsl #2
+        ldr r2, [r2, #4]
+        add r3, r3, #1
+        str r3, [r0]
+        str r2, [r1]
+        bx  lr
+    \end{lstlisting}
+\end{multicols}
+\vspace{-\baselineskip}
+
+Incrementing the value of the index in memory involves separate load, increment,
+and store instructions, seen at the beginning of the x86 version of
+\texttt{push} in the listing above\footnotemark.  Since multiple threads may
+execute this sequence of instructions and could be interleaved in any order,
+there is the potential of data races and incorrect results (consider the case
+where threads are suspended before they can execute the third instruction and
+later resumed).  For this queue to operate correctly, the increment of the index
+must be a serialized, atomic operation.
+
+\footnotetext{
+    Note also that GCC in this optimized build (\texttt{gcc -O2}) chose to first
+    store \texttt{q->i} \emph{then} load/store the value \texttt{q->v} in both
+    functions in both architectures.  We will analyze this important fact in
+    later implementations.}
+
+Naturally, one implementation possibility is to wrap operations with a mutex (v.
+section \secrefpar{subsec:conc:mutex}), as shown in listing
+\ref{lst:conc:queue_mtx}.  This guarantees serialization and may be appropriate
+under low contention (v. \cite{Preshing2011}).  In high-throughput queues,
+however, the system calls required to suspend and wake threads can become a
+limiting factor.
+
+Before analyzing an alternative implementation, we first look at a problem that
+follows from the introduction of multiple threads.  In a single-threaded
+program, mere program order guarantees that consuming the data buffer is safe
+after the last \texttt{push} operation finishes or before the first \texttt{pop}
+starts.  No such guarantee exists in a multi-threaded scenario, so memory
+ordering instructions are necessary.  In these examples, unless otherwise noted,
+this ordering is assumed to be established by the operations which start the
+threads and wait for them to finish --- i.e. that they have, respectively,
+acquire and release semantics.
+
+Since there are only ever producers \emph{or} consumers operating on the queue,
+it is enough to guarantee that the increments are serialized and the
+loads/stores are not reordered.  Listing \ref{lst:conc:queue_atomic} shows an
+implementation using a relaxed atomic increment operation, which has all of
+these properties.
+
+\begin{figure}[ht]
+    \lstinputlisting[
+        style=c,
+        firstline=5,
+        label=lst:conc:queue_atomic,
+        caption={Queue with atomic operations},
+    ]{concurrency/queue_atomic.c}
+\end{figure}
+
+\subsubsection{\texttt{is\_full}}
+
+Lock-free algorithms are rarely completely general and thus must be built to fit
+particular usage and performance requirements.  Different circumstances often
+require different algorithms, sometimes radically so.  The current
+implementation has made \texttt{is\_full} purely informational: it cannot be
+used to determine if the other operations are safe since the index may be moved
+between the check and the subsequent increment.  It is assumed that there are
+other ways of guaranteeing that operations do not read/write outside the buffer
+(e.g. each thread is given an exact number of push/pop operations).
+
+One alternative is to check the value returned by \texttt{atomic\_fetch\_add}
+before performing the load/store.  The atomic increment has already ensured the
+thread has a unique position in the buffer by the time the check is done, so no
+race condition is introduced.  The queue index is always incremented, however,
+so this is only safe if there are enough values between \texttt{N} and
+\texttt{UINT\_MAX} (the maximum value for \texttt{q->i}) so that all threads can
+increment it once and see that it is now out of bounds.  If not, the value will
+eventually wrap back to zero\footnotemark and appear to be valid again.
+
+\footnotetext{
+    N.b.: \texttt{q->i} is an \texttt{unsigned} value, so this is defined
+    behavior.  See also the discussion below of the ABA problem introduced by
+    reusing index values.}
+
+Listing \ref{lst:conc:queue_cas} shows a more robust implementation which
+eliminates these restrictions at the cost of more expensive atomic operations.
+It uses an \textit{atomic compare-and-swap} (CAS) loop to ensure \texttt{q->i}
+is only assigned valid indices.  A compare-exchange operation has three
+arguments (other than the memory ordering specification): the destination and
+the \emph{expected} and \emph{desired} values.  It first compares the
+destination and expected values.  If they are equal (i.e. the destination has
+not been modified by other threads since it was last loaded), it stores the
+desired value in the destination.  If they are not, the expected value is
+updated with the current value of the destination.  All of these steps happen as
+a single atomic operation.
+
+\begin{figure}[ht]
+    \lstinputlisting[
+        style=c,
+        firstline=11,
+        lastline=28,
+        label=lst:conc:queue_cas,
+        caption={Queue with atomic compare-and-swap},
+    ]{concurrency/queue_cas.c}
+\end{figure}
+
+The queue index is first loaded using a relaxed atomic operation.  If the value
+is ever observed to be at the end of the buffer, the \texttt{for} loop
+terminates and \texttt{NULL} is returned.  In each iteration, we increment the
+value just loaded and attempt to store it, checking to see if it has not changed
+while it was being tested.  This type of construction, where an atomic CAS is
+used to build an effectively atomic operation out of one or more non-atomic
+ones, is a very common pattern in lock-free algorithms.
+
+\subsubsection{Ring buffer}
+
+An alternative design is to let threads continuously operate on the queue even
+when there is no space left.  Whenever the index reaches the end of the queue,
+it is reset to the beginning (conceptually, at least).  This arrangement is
+usually called a \textit{ring buffer}, since the wrapping of the index space can
+be conceptualized as a circle (\textit{circular buffer} is also commonly used).
+
+Push operations overwrite older values when there is no space left on the queue.
+This may be desirable if only the last $N$ or less items are relevant, which is
+common, for example, in real-time systems.  The pop equivalent is less common,
+but may be useful if threads consume a finite, pre-calculated set of data.  When
+the buffer is exhausted, the index is simply reset to the beginning and threads
+start reusing old values, potentially in a different order.
+
+Listings \ref{lst:conc:queue_ring_mod} and \ref{lst:conc:queue_ring_and} show
+implementations of this pattern.  The only change is to the \texttt{advance}
+function, since it is the one which defines the index space.  \texttt{is\_full}
+has no meaning in ring buffers, so it is not included.  Listing
+\ref{lst:conc:queue_ring_mod} is implemented in a general way, using the integer
+modulus operation.  Since this is a relatively expensive operation, a common
+choice is to limit the queue size to powers of 2.  The remainder can then be
+found with a simple bitwise \texttt{and} operation, which is usually an order of
+magnitude faster.  Listing \ref{lst:conc:queue_ring_and} shows this
+implementation\footnotemark.
+
+\footnotetext{
+    V. section \ref{subsubsec:arch:sub} for an explanation of the expression
+    used in the \texttt{static\_assert}.}
+
+\begin{figure}[ht]
+    \begin{subfigure}[t]{0.5\textwidth}
+        \lstinputlisting[
+            style=c,
+            firstline=11,
+            lastline=17,
+            label=lst:conc:queue_ring_mod,
+            caption={Ring buffer},
+        ]{concurrency/queue_ring_mod.c}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.45\textwidth}
+        \lstinputlisting[
+            style=c,
+            firstline=12,
+            lastline=19,
+            label=lst:conc:queue_ring_and,
+            caption={Ring buffer with bitwise \texttt{and}},
+        ]{concurrency/queue_ring_and.c}
+    \end{subfigure}
+\end{figure}
+
+\subsubsection{ABA}
+
+This is our first encounter with the infamous \textit{ABA problem}, so called
+after the case where a thread observes value \texttt{A} and is suspended, the
+value is changed from \texttt{A} to \texttt{B} then back to \texttt{A}, and the
+original thread is resumed.  Even though there was no change from the
+perspective of the waking thread, the two values of \texttt{A} may not represent
+the same state.  The canonical example is that of a pointer \texttt{A} to an
+object which is deallocated and whose memory block is subsequently
+reused\footnotemark.  A thread using the memory address contained in \texttt{A}
+as an identifier will perceive no change, even though the object to which it
+points is now different.
+
+\footnotetext{
+    It is common for memory allocators to use some kind of MRU policy since it
+    increases the chance of maintaining blocks in cached memory.}
+
+Our ring buffer suffers from a different type of ABA problem, stemming from the
+fact that there is an interval between the calculation of the new index by
+\texttt{advance} and the store in \texttt{push}.  All previous examples relied
+on the fact that indices are not reused.  This is also why only the access to
+the queue index is done using atomic operations: loads and stores to a
+particular buffer position are always done by a single thread.  This is not true
+in a ring buffer, but the serialization of the atomic increment operation is
+used to ensure that each thread issues stores to a memory location it has
+exclusive access to.
+
+However, it is possible that a thread could be suspended right after calculating
+its index and sleep while other threads go through a full rotation of the ring.
+When the thread is awakened, it could attempt to write to the memory location it
+originally calculated at the same time as another thread which just happened to
+be assigned the same index, now a full rotation ahead.  Whether this is a
+problem in reality is a function of the queue size and frequency of operations.
+The larger the queue size the less likely a thread will be suspended for long
+enough for the same index to be reused.  There are only a few machine
+instructions involved, so the window for thread preemption is small:
+
+\begin{multicols}{2}
+    \begin{lstlisting}[style=x86]
+push:
+    mov       eax, 1
+    lock xadd DWORD PTR [rdi], eax
+    and       eax, 1023
+    mov       4[rdi+rax*4], esi
+    ret
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=arm]
+push:
+.L5:
+    ldrex r3, [r0]
+    add   r2, r3, #1
+    strex ip, r2, [r0]
+    cmp   ip, #0
+    bne   .L5
+    ubfx  r3, r3, #0, #10
+    add   r0, r0, r3, lsl #2
+    str   r1, [r0, #4]
+    bx    lr
+    \end{lstlisting}
+\end{multicols}
+\vspace{-\baselineskip}
+
+\subsubsection{Single-producer, single-consumer}
+
+\begin{figure}[ht]
+    \begin{subfigure}[t]{0.475\textwidth}
+        \lstinputlisting[
+            style=c,
+            firstline=5,
+            label=lst:conc:queue_spsc0,
+            caption={(Incorrect) SP/SC queue},
+        ]{concurrency/queue_spsc0.c}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.5\textwidth}
+        \lstinputlisting[
+            style=c,
+            firstline=6,
+            label=lst:conc:queue_spsc1,
+            caption={SP/SC queue},
+        ]{concurrency/queue_spsc1.c}
+    \end{subfigure}
+\end{figure}
+
+The queue implementations examined so far required no thread synchronization:
+since only producers \emph{or} consumers were involved, it was enough to ensure
+that the operations on shared memory were atomic (i.e. indivisible).  The
+implicit serialization of the writes to the queue index was all that was needed
+to arbitrate access to the buffer.
+
+We now consider a single-producer, single-consumer queue (listing
+\ref{lst:conc:queue_spsc0}).  There are now two indices: \texttt{r} and
+\texttt{w}, the read and write pointers.  They are the equivalent of the
+previous single index \texttt{i} for the consumer and the producer,
+respectively, but allow them to share access to the buffer and operate at
+different frequencies.  The write pointer is always at or ahead of the read
+pointer.  We will initially return to a single-use queue, so in this example
+both pointers advance only once to the end of the buffer.  We will later
+reconsider ring buffers.
+
+The implementation as shown is incorrect because relaxed atomic operations are
+no longer sufficient: the queue now requires memory ordering operations to
+synchronize the producer and the consumer.  To understand why, we must analyze
+the sequence of operations performed by each in \texttt{push} and \texttt{pop}:
+
+\begin{itemize}
+    \item
+        The read pointer is only ever modified by the (single) consumer in
+        \texttt{pop}, so it is a regular \texttt{unsigned} variable.
+    \item
+        The write pointer is similarly only ever modified by the (single)
+        producer in \texttt{push}, but this variable is also read by the
+        consumer.  We signal this by the use of \texttt{volatile}\footnotemark.
+    \footnotetext{
+        Assuming loads/stores of \texttt{unsigned} values are atomic, relaxed
+        atomic operations would be the portable mechanism.}
+    \item
+        To pop a value from the buffer, the consumer verifies that the producer
+        has made data available, loads it, and advances the read pointer.
+    \item
+        To push a value to the buffer, the producer verifies that there is still
+        space remaining (this is now a valid check as there is a single
+        producer), stores it, and advances the write pointer.
+    \item
+        Loads and stores to the indices and the buffer must happen in program
+        order, otherwise the consumer could see stale or uninitialized data.
+\end{itemize}
+
+Consider what can happen without memory ordering restrictions in a
+weakly-ordered architecture.  The two stores in \texttt{push} could be effected
+by the hardware in the opposite order\footnotemark:
+
+\footnotetext{
+    The \texttt{volatile} type qualifier of \texttt{q->w} is only applied at the
+    language/compiler level.  It does not affect the types of loads/stores
+    ultimately performed by the machine.}
+
+\begin{center}
+    \begin{tabular}{ccc}
+        \begin{lstlisting}[style=c]
+q->v[w] = i;
+q->w = w + 1;
+        \end{lstlisting}
+        & $\to$ &
+        \begin{lstlisting}[style=c]
+q->w = w + 1;
+q->v[w] = i;
+        \end{lstlisting} \\[0.5em]
+    \end{tabular}
+\end{center}
+
+If the reader side is executed between these two conceptual lines, it will read
+the updated write position and load stale or uninitialized memory.  Similarly,
+the two loads in \texttt{pop} could see values stored at different points in
+time, each from a separate call to \texttt{push}:
+
+\begin{center}
+    \begin{tabular}{ccc}
+        \begin{lstlisting}[style=c]
+const unsigned w = q->w, r = q->r;
+// ...
+*i = q->v[q->r];
+        \end{lstlisting}
+        & $\to$ &
+        \begin{lstlisting}[style=c]
+*i = q->v[q->r];
+const unsigned w = q->w, r = q->r;
+// ...
+        \end{lstlisting} \\[1.5em]
+    \end{tabular}
+\end{center}
+
+Listing \ref{lst:conc:queue_spsc1} shows a revised implementation that
+eliminates these problems using explicit memory ordering operations.  The
+corresponding atomic load/store of \texttt{q->w} in \texttt{push}/\texttt{pop}
+guarantee thread synchronization.  The fence operation with \emph{acquire}
+semantics guarantees that all loads that succeed it see values stored after the
+corresponding store was executed\footnotemark.  The store and all operations
+preceding it are said to \textit{happen before} the fence and all operations
+that succeed it.  This relationship is denoted with the right arrow ($\to$)
+symbol: $l \to s$, load $l$ happens before store $s$.
+
+\footnotetext{
+    The acquire operation is not needed in the case where there is no data to be
+    read, so a combination of a relaxed load + fence is used.  A single
+    load/acquire operation would be equally valid, but with a potential
+    efficiency loss.  The load of \texttt{q->w} at the beginning of
+    \texttt{push} can be non-atomic since it is only ever written to by the
+    (single) producer.}
+
+This eliminates the first problem described above as the two instructions cannot
+be reordered\footnotemark:
+
+\footnotetext{
+    In this and the following diagrams, the long arrow symbol
+    ($\longrightarrow$) indicates the ``happens before'' relation described
+    above between synchronized pairs of loads/stores in the code fragments
+    immediately to its left and right.}
+
+\begin{center}
+    \begin{tabular}{ccc}
+        \begin{lstlisting}[style=c,showlines=true]
+q->v[w] = i;
+q->w = w + 1;
+
+        \end{lstlisting}
+        & \parbox[c]{2em}{
+            \vspace{0.5\baselineskip}
+            $\longrightarrow$
+        } &
+        \begin{lstlisting}[style=c]
+
+const unsigned w = /*...*/;
+*i = q->v[r];
+        \end{lstlisting} \\[1.25em]
+    \end{tabular}
+\end{center}
+
+That is, any time the reader side loads a value into its \texttt{w} local
+variable, all instructions following that load are guaranteed to see all stores
+that preceded the corresponding store.  It will never see the store to
+\texttt{q->v[w]} on the writer side without also seeing the
+immediately-preceding store to \texttt{q->w}.  The load operation synchronizes
+with the store, creating a barrier around which stores cannot be reordered.
+
+It is important to note that this relationship exists only between two
+corresponding load/store operations.  A \texttt{pop} operation that occurs in
+between a series of \texttt{push}es could see any of the possible values of
+\texttt{q->w}, depending on how the producer/consumer are interleaved.  The only
+guarantee provided by memory ordering operations in this respect is that a
+subsequent load will not see previous values of \texttt{q->w} (or any other
+preceding store).
+
+\begin{center}
+    \begin{tabular}{ccc}
+        \begin{lstlisting}[style=c,showlines=true]
+q->v[w] = i;
+q->w = w + 1;
+q->v[w] = i;
+q->w = w + 1;
+q->v[w] = i;
+q->w = w + 1;
+q->v[w] = i;
+q->w = w + 1;
+
+        \end{lstlisting}
+        & \parbox[c]{2em}{
+            \vspace{2\baselineskip}
+            $\longrightarrow$
+
+            \vspace{2.25\baselineskip}
+            $\longrightarrow$
+        } &
+        \begin{lstlisting}[style=c,showlines=true]
+
+
+
+const unsigned w = /*...*/;
+*i = q->v[r];
+
+
+const unsigned w = /*...*/;
+*i = q->v[r];
+        \end{lstlisting} \\[1.5em]
+    \end{tabular}
+\end{center}
+
+Similarly, this ``happens before'' relation is only a \emph{strong partial
+order} (v. section \secrefpar{subsec:algo:ordering}): it establishes no relation
+between two operations that happen before a third.  In other words, two
+operations are concurrent if $\neg ((a \to b) \lor (b \to a))$.  It is, however,
+transitive: $(a \to b) \land (b \to c) \, \implies \, a \to c$.  This can be
+used to build a causal chain of arbitrary length between successive operations
+in two or more threads, each of which is guaranteed to occur after all the
+operations that happen before it.

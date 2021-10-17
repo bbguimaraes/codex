@@ -13,6 +13,14 @@ CXXFLAGS := -std=c++20 $(WARNINGS)
 TEX_INPUT := \
 	codex.bib *.tex */*.tex */*/*.tex */*.c */*/*.c
 LISTINGS := \
+	concurrency/queue_atomic.o \
+	concurrency/queue_cas.o \
+	concurrency/queue_mtx.o \
+	concurrency/queue_ring_and.o \
+	concurrency/queue_ring_mod.o \
+	concurrency/queue_spsc0.o \
+	concurrency/queue_spsc1.o \
+	concurrency/queue_st.o \
 	cpp/mult_inh \
 	cpp/mult_inh.o \
 	cpp/mult_opt.o \

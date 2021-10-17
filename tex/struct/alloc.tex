@@ -1,0 +1,216 @@
+\section{Allocation}
+
+Two main dynamic allocation strategies are common in software:
+
+\begin{itemize}
+    \item
+        Objects are independent entities and given a dedicated region of memory
+        specially allocated to store them.  This is the pattern often found in
+        dynamic, high-level languages, where even primitive objects are
+        \textit{boxed}, i.e. have their own distinct allocation.
+
+        In compound structures composed of multiple fields, each value is simply
+        a \textit{reference} to its sub-objects, which also have their own
+        dedicated allocation.  Object construction in these languages is often
+        indivisible from memory allocation, as shown in listing
+        \ref{lst:struct:alloc_dedicated}.
+    \item
+        Lower-level languages such as C and C++ offer more control over the
+        memory layout of objects.  Pointers and dynamic memory allocation
+        primitives/functions can still be used to implement the previous
+        pattern, but often objects are \textit{embedded} in others.
+
+        An object --- a \texttt{struct} in C --- is the concatenation of all of
+        its constituent fields\footnotemark.  Memory allocation and object
+        construction are usually two distinct operations, as shown in listing
+        \ref{lst:struct:alloc_embedded}.
+\end{itemize}
+
+\footnotetext{Ignoring for the moment field padding and alignment.}
+
+Each of these allocation strategies has advantages and disadvantages.  Boxed
+objects put pressure on the memory allocator and can waste memory space.  Every
+variable/member access is indirect, potentially to memory locations which are
+distant from each other, reducing cache efficiency.  Copying this type of object
+is usually only a \textit{shallow} copy: references to sub-objects are simply
+copied and continue to point to the same place.  This can cause problems when
+both the original object and the copy are used in a way which expects
+independent objects.  In contrast, the location in memory of boxed objects is
+often stable, reducing the risk of invalid memory accesses due to relocation.
+
+Conversely, embedded objects are very fast and compact, since a single block of
+memory (either on the stack or the heap) is used to store them.  This block can
+also be loaded completely in one or more cache lines, making accesses very
+efficient.  Copying embedded objects (either via \ident{memcpy} in C or a copy
+constructor/assignment in C++) is a \textit{deep} copy: the resulting copy is
+completely independent of the original.
+
+\begin{figure}[p]
+    \lstinputlisting[
+        style=c,
+        caption={Structure allocation (dedicated)},
+        label={lst:struct:alloc_dedicated},
+        firstline=5,
+    ]{struct/alloc/dedicated.c}
+    \lstinputlisting[
+        style=c,
+        caption={Structure allocation (embedded)},
+        label={lst:struct:alloc_embedded},
+        firstline=5,
+    ]{struct/alloc/embedded.c}
+\end{figure}
+
+\subsection{Data headers}
+
+The complete control over memory allocation offered by the second strategy
+allows other patterns to be used.  A common one is to associate extra
+information with an allocation: a memory allocator may store tracking
+information, a linked list may store previous/next pointers, an array of items
+may store its length, etc.  A single memory block can be used both for the
+contained object and its associated information.
+
+\subsubsection{\ident{array}}
+
+Listing \ref{lst:struct:header} shows an implementation of the latter example:
+an array of bytes (or string) which stores information about the items as a
+header prepended to the memory block.  The client interface deals solely with a
+\texttt{char*} which points directly to the data block.  The implementation,
+however, actually allocates an object of type \texttt{struct array} which stores
+additional information about the object --- the size and some arbitrary set of
+flags in this case.  \ident{array_alloc} allocates a single block of memory
+containing both the header and the client data.  This header is easily
+retrievable from the pointer returned to the client via the use of simple
+pointer arithmetic, as demonstrated in \ident{array_size}, which uses the header
+information.  \ident{array_destroy} uses the same calculation to pass the
+correct pointer to \texttt{free} --- which likely uses a similar technique
+internally for its allocation tracking data.
+
+\begin{figure}[ht]
+    \lstinputlisting[
+        style=c,
+        label={lst:struct:header},
+        caption={Memory block header},
+        firstline=10,
+    ]{struct/alloc/header.c}
+\end{figure}
+\vspace{-\baselineskip}
+
+\begin{aside}
+    This structure uses the C99 \textit{flexible array member} syntax.
+    \texttt{data} does not occupy any actual space in the object (as
+    demonstrated by the \ident{static_assert}): it is simply convenient syntax
+    which gives direct access to a data block of undetermined size appended to
+    the object.  Using this syntax has several advantages over other methods
+    (such as declaring it as an array of one element\footnotemark):
+    \begin{itemize}
+        \item
+            \texttt{sizeof} accurately reports the size of the \texttt{struct}
+            --- it does not include the array.
+        \item
+            It is not possible to use \texttt{sizeof} with the array member, it
+            is considered as having an incomplete type.  This prevents the
+            accidental use in an attempt to incorrectly calculate the size of
+            the array.
+        \item
+            Structures with trailing flexible array members cannot be placed in
+            the middle of other \texttt{struct}s or in arrays.
+    \end{itemize}
+    Prior to C99, some compilers (such as GCC) supported declaring an array of
+    zero elements as an extension, with similar (but inferior) semantics.
+\end{aside}
+
+\footnotetext{
+    Section \secref{sec:c:ub} shows an example of how mistakes in this case can
+    be subtle and catastrophic.}
+
+\subsubsection{\ident{sockaddr}}
+
+One particular use of this pattern is in indicating that a structure is expected
+to be ``extended'' by other structure types\footnotemark.  One classical example
+is the Unix/POSIX \ident{struct sockaddr}.  Networking sockets of all types are
+created uniformly via \ident{socket(2)}, server sockets are all bound to an
+address via \ident{bind(2)}, client sockets are all connected to servers via
+\ident{connect(2)}, etc.  Each networking protocol, however, has its own address
+structure, called an \textit{address family} in the POSIX standard, and each
+family has a different format:
+
+\footnotetext{V. \secref{sec:c++:oop} for a complete discussion of inheritance.}
+
+\begin{itemize}
+    \item Unix-domain sockets are bound to a local path on the file system.
+    \item IPv4 sockets are bound to an address and a port.
+    \item
+        IPv6 sockets are also bound to an address/port, but use a different
+        address format.
+    \item etc.
+\end{itemize}
+
+In order to support all address types, system calls receive their socket address
+parameter using the following pattern:
+
+\begin{lstlisting}[style=c]
+int bind(int socket, const struct sockaddr *address, socklen_t address_len);
+\end{lstlisting}
+
+One possible definition of the types involved is shown in listing
+\ref{lst:struct:sockaddr}.  \ident{struct sockaddr} is the ``base'' type: its
+\ident{sa_family_t} member is an unsigned integer type --- in this way, the
+structure can be conceptualized as a discriminated \ident{union} type.  The
+trailing array member \ident{sa_data} indicates that extra data are placed at
+the end of the object, and that the size of the structure can vary (similarly to
+the one in the previous example).  For each address type, a derivative of this
+structure exists, some of which are also shown in the listing.
+
+\begin{figure}[ht]
+    \centering
+    \begin{subfigure}[t]{0.45\textwidth}
+        \begin{lstlisting}[style=c]
+struct sockaddr {
+    sa_family_t sa_family;
+    char sa_data[];
+};
+
+struct sockaddr_storage {
+    sa_family_t ss_family;
+    char ss_padding[/*...*/];
+    ss_aligntype ss_align;
+};
+        \end{lstlisting}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.4\textwidth}
+        \begin{lstlisting}[style=c]
+struct sockaddr_un {
+    sa_family_t sun_family;
+    char sun_path[108];
+};
+
+struct sockaddr_in {
+    sa_family_t sin_family;
+    u16 sin_port;
+    struct in_addr sin_addr;
+    char sin_pad[/*...*/];
+};
+
+struct sockaddr_in6 {
+    sa_family_t sin6_family;
+    u16 sin6_port;
+    u32 sin6_flowinfo;
+    struct in6_addr sin6_addr;
+    u32 sin6_scope_id;
+};
+        \end{lstlisting}
+    \end{subfigure}
+    \captionof{lstlisting}{\ident{struct sockaddr}}
+    \label{lst:struct:sockaddr}
+\end{figure}
+
+This collection of types allows socket addresses to have several different
+formats.  Clients create an object of one of the specific address types and cast
+them to \ident{struct sockaddr} as the \ident{address} parameter of system
+calls.  Similarly, \ident{address_len}, actual size of the structure, is known
+to them.  On the other side of the call, system calls can inspect
+\texttt{address->sa\_family} to detect the address type and then cast the
+pointer to the appropriate, derived type.  This is valid since all structures
+have a common prefix.  \ident{sockaddr_storage} can be used as generic storage
+for any of the derived types: its members are defined such that it will have the
+correct size and alignment to satisfy all types.

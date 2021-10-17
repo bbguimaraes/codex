@@ -16,6 +16,9 @@ LISTINGS := \
 	cpp/mult_inh \
 	cpp/mult_inh.o \
 	cpp/mult_opt.o \
+	struct/alloc/dedicated.o \
+	struct/alloc/embedded.o \
+	struct/alloc/header.o \
 	struct/list/ops.o
 
 .PHONY: all clean clean-listings link-full link-fast listings

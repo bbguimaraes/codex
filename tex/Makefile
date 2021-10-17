@@ -11,11 +11,12 @@ WARNINGS := -Wall -Wextra -Wpedantic -Wconversion
 CFLAGS := -std=c18 $(WARNINGS)
 CXXFLAGS := -std=c++20 $(WARNINGS)
 TEX_INPUT := \
-	codex.bib *.tex */*.tex */*/*.tex
+	codex.bib *.tex */*.tex */*/*.tex */*.c */*/*.c
 LISTINGS := \
 	cpp/mult_inh \
 	cpp/mult_inh.o \
-	cpp/mult_opt.o
+	cpp/mult_opt.o \
+	struct/list/ops.o
 
 .PHONY: all clean clean-listings link-full link-fast listings
 all: codex.pdf listings

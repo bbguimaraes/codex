@@ -1,0 +1,52 @@
+\paragraph{\ref{ch:struct}.\ref{ex:struct:list_reverse}}
+
+There are several ways to conceptualize the operations involved in the reversal
+of a list.  One of them is to start with an empty list and continuously move one
+element from the front of the old list to the front of the new one.  Always
+pushing to the front of the new list effectively reverses the order of nodes.
+
+\begin{lstlisting}[style=c]
+struct node *list_reverse(struct node *n) {
+    struct node *ret = NULL;
+    for(struct node *next = NULL; n; n = next) {
+        next = n->next;
+        list_push_front(&ret, n);
+    }
+    return ret;
+}
+\end{lstlisting}
+
+\paragraph{\ref{ch:struct}.\ref{ex:struct:list_remove}}
+
+This exercise shows the benefit of treating the list head and links
+homogeneously.  The function is passed a double pointer, so it can examine the
+value in the node via a double dereference, but also modify the head or node
+link pointer through it.  Figures \ref{fig:sol:list_remove0} and
+\ref{fig:sol:list_remove1} show both cases.
+
+\begin{lstlisting}[style=c]
+struct node *list_remove(struct node **l, int value) {
+    for(; *l; l = &(*l)->next) {
+        if((*l)->value != value)
+            continue;
+        struct node *ret = *l;
+        *l = ret->next;
+        return ret;
+    }
+    return NULL;
+}
+\end{lstlisting}
+
+\begin{figure}[p]
+    \centering
+    \input{sol/struct/list_remove0.tex}
+    \caption{\texttt{list\_remove(\&l, 0)}}
+    \label{fig:sol:list_remove0}
+\end{figure}
+
+\begin{figure}[p]
+    \centering
+    \input{sol/struct/list_remove1.tex}
+    \caption{\texttt{list\_remove(\&l, 1)}}
+    \label{fig:sol:list_remove1}
+\end{figure}

@@ -1,0 +1,83 @@
+\begin{tikzpicture}[
+        every node/.style={minimum height = 16px},
+        code/.style = {align = center, font = \small},
+        >={Stealth[round]},
+    ]
+    \node (obj0) [object = 2] at (0, 7.5) {
+        \vrule height 0.5em depth 0.25em width 0pt
+        \itshape obj
+        \nodepart{two} \vrule height 0.5em depth 0.25em width 0pt
+        head
+    };
+    \node (obj1) [object = 2] at (0, 4) {
+        \vrule height 0.5em depth 0.25em width 0pt
+        \itshape obj
+        \nodepart{two} \vrule height 0.5em depth 0.25em width 0pt
+        head
+    };
+    \node (obj2) [object = 2] at (0, 0) {
+        \vrule height 0.5em depth 0.25em width 0pt
+        \itshape obj
+        \nodepart{two} \vrule height 0.5em depth 0.25em width 0pt
+        head
+    };
+    \node (n0_0) [lnode, right = of obj0.two east] {0};
+    \node (n1_0) [lnode, right = of n0_0] {1};
+    \node (n2_0) [lnode, right = of n1_0] {2};
+    \node (n0_1) [lnode, right = of obj1.two east] {0};
+    \node (n1_1) [lnode, right = of n0_1] {1};
+    \node (n2_1) [lnode, right = of n1_1] {2};
+    \node (n0_2) [lnode, right = of obj2.two east] {0};
+    \node (n1_2) [lnode, right = of n0_2] {1};
+    \node (n2_2) [lnode, right = of n1_2] {2};
+    \node (l0) [left = of obj0.two west] {l};
+    \node (l1) [above = of n0_1.two north, yshift = -1.5em] {l};
+    \node (l2) [above = of n0_2.two north, yshift = -1.5em] {l};
+    \node (t0) [code] at (0, 5.5) {
+        \texttt{(*l)->value != 1} \\
+        \texttt{n0.value != 1}
+    };
+    \node (t1) [code, right = of t0] {
+        \texttt{l = \&(*l)->next} \\
+        \texttt{l = \&(*obj.head).next} \\
+        \texttt{l = \&n0.next}
+    };
+    \node (t2) [code] at (0, 1.75) {
+        \texttt{(*l)->value == 1} \\
+        \texttt{n0.value == 1}
+    };
+    \node (t3) [code, right = of t2] {
+        \texttt{*l = (*l)->next} \\
+        \texttt{n0.next = (*obj.head).next} \\
+        \texttt{n0.next = n1.next} \\
+        \texttt{n0.next = \&n2}
+    };
+    \node [below = of n0_0, yshift = 2.5em] {n0};
+    \node [below = of n1_0, yshift = 2.5em] {n1};
+    \node [below = of n2_0, yshift = 2.5em] {n2};
+    \node [below = of n0_1, yshift = 2.5em] {n0};
+    \node [below = of n1_1, yshift = 2.5em] {n1};
+    \node [below = of n2_1, yshift = 2.5em] {n2};
+    \node [below = of n0_2, yshift = 2.5em] {n0};
+    \node [below = of n1_2, yshift = 2.5em] {n1};
+    \node [below = of n2_2, yshift = 2.5em] {n2};
+    \draw[->] (t0) -- (t1);
+    \draw[->] (t2) -- (t3);
+    \draw[->] (n0_0) -- (n1_0);
+    \draw[->] (n1_0) -- (n2_0);
+    \draw[->] (n0_1) -- (n1_1);
+    \draw[->] (n1_1) -- (n2_1);
+    \draw[->] (n0_1) -- (n1_1);
+    \draw[->] (n1_1) -- (n2_1);
+    \draw[->]
+        (n0_2.east)
+        .. controls ($ (n1_2) + (0, 4em) $) and +(0, 0)
+        .. (n2_2.west);
+    \draw[->] (n1_2) -- (n2_2);
+    \draw[->] (l0) -- (obj0.two west);
+    \draw[->] (l1) -- (n0_1.two north);
+    \draw[->] (l2) -- (n0_2.two north);
+    \draw[->] (obj0.two east) -- (n0_0);
+    \draw[->] (obj1.two east) -- (n0_1);
+    \draw[->] (obj2.two east) -- (n0_2);
+\end{tikzpicture}

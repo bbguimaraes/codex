@@ -1,0 +1,269 @@
+\section{Linked lists}
+
+Linked lists are a simple data structure which consist of a sequence of elements
+and the connections between them (\textit{links}).  This contrasts with arrays,
+which contain just the elements themselves, where the order is implicit in the
+fact that elements are laid out sequentially in memory\footnotemark.  Even so,
+the underlying storage for the elements is immaterial: the definition of the
+data structure is only concerned with how elements are connected to each other.
+
+\footnotetext{
+    Subject to alignment and padding requirements, but still extrinsic and
+    independent of the contents of each element.}
+
+\subsection{Singly linked list}
+
+The simplest possible implementation of a linked list is shown in figure
+\ref{fig:struct:array_list0}.  A fixed-size array is used to store the elements
+(separated by solid lines), where each is some data and the index of the next
+element (denoted with arrows).  The iteration process starts at the list
+\textit{head}, denoted by the arrow starting on the left.  After an element is
+processed, the next element is obtained by adding the element's ``next'' index
+to the list head.  A special index value denotes the last element, the list
+\textit{tail}.  Iteration stops after this element is processed.
+
+\begin{figure}[ht]
+    \centering
+    \begin{tikzpicture}[
+        rectangle/.style={minimum height = 2em},
+        rectangle split draw splits = false,
+    ]
+        \matrix {
+            \node (n0) [lnode] {~ \nodepart{two} 1}; &
+            \node (n1) [lnode] {~ \nodepart{two} 2}; &
+            \node (n2) [lnode] {~ \nodepart{two} 3}; &
+            \node (n3) [lnode] {~ \nodepart{two} 4}; &
+            \node (n4) [lnode] {~ \nodepart{two} 5}; &
+            \node (n5) [lnode] {~ \nodepart{two} 6}; &
+            \node (n6) [lnode] {~ \nodepart{two} 7}; &
+            \node (n7) [lnode] {\phantom{7}}; \\
+            \node {0}; & \node {1}; & \node {2}; & \node {3}; &
+            \node {4}; & \node {5}; & \node {6}; & \node {7}; \\
+        };
+        \foreach \n in {n0, n1, n2, n3, n4, n5, n6, n7} {
+            \draw[dashed]
+                ($ (\n.north west)!0.5!(\n.north east) $)
+                -- ($ (\n.south west)!0.5!(\n.south east) $);
+        }
+        \draw ($ (n0) - (1, 0) $) edge[->] (n0.west);
+        \foreach \n/\m in {n0/n1, n1/n2, n2/n3, n3/n4, n4/n5, n5/n6, n6/n7} {
+            \draw
+                ($ (\n.north west)!0.75!(\n.north east) $)
+                -- +(0, 0.25)
+                -- ($ (\m.north west)!0.5!(\m.north east) + (0, 0.25) $)
+                edge[->] +(0, -0.25);
+        }
+    \end{tikzpicture}
+    \caption{Array as linked list}
+    \label{fig:struct:array_list0}
+\end{figure}
+
+Because there is a single link in each element that points forward to the next
+element, this type of structure is called a \textit{singly linked list} or
+\textit{forward list}.  One advantage they have over arrays becomes apparent
+when elements are added and/or removed.  When these operations are performed in
+an array in any position that is not the last, elements must be shift either up
+or down to make or fill the space for the target position.  In a linked list,
+these operations simply manipulate the links between elements.
+
+Figure \ref{fig:struct:array_list1} shows the same list after a few of these
+operations.  The sequence of elements is now \texttt{0, 2, 4, 1, 5, 6} even
+though they all retain their previous location in memory.
+
+\begin{figure}[ht]
+    \centering
+    \begin{tikzpicture}[
+        rectangle/.style={minimum height = 2em},
+        rectangle split draw splits = false,
+    ]
+        \matrix {
+            \node (n0) [lnode] {~ \nodepart{two} 2}; &
+            \node (n1) [lnode] {~ \nodepart{two} 6}; &
+            \node (n2) [lnode] {~ \nodepart{two} 4}; &
+            \node (n3) [lnode] {\phantom{3}}; &
+            \node (n4) [lnode] {~ \nodepart{two} 1}; &
+            \node (n5) [lnode] {~ \nodepart{two} 6}; &
+            \node (n6) [lnode] {~ \nodepart{two} \phantom{7}}; &
+            \node (n7) [lnode] {\phantom{7}}; \\
+            \node {0}; & \node {1}; & \node {2}; & \node {3}; &
+            \node {4}; & \node {5}; & \node {6}; & \node {7}; \\
+        };
+        \foreach \n in {n0, n1, n2, n3, n4, n5, n6, n7} {
+            \draw[dashed]
+                ($ (\n.north west)!0.5!(\n.north east) $)
+                -- ($ (\n.south west)!0.5!(\n.south east) $);
+        }
+        \draw ($ (n0) - (1, 0) $) edge[->] (n0.west);
+        \foreach \n/\m in {n0/n2, n2/n4, n5/n6} {
+            \draw
+                ($ (\n.north west)!0.75!(\n.north east) $)
+                -- +(0, 0.25)
+                -- ($ (\m.north west)!0.5!(\m.north east) + (0, 0.25) $)
+                edge[->] +(0, -0.25);
+        }
+        \draw
+            ($ (n4.north west)!0.75!(n4.north east) $)
+            -- +(0, 0.5)
+            -- ($ (n1.north west)!0.5!(n1.north east) + (0, 0.5) $)
+            edge[->] +(0, -0.5);
+        \draw
+            ($ (n1.north west)!0.75!(n1.north east) $)
+            -- +(0, 0.75)
+            -- ($ (n5.north west)!0.5!(n5.north east) + (0, 0.75) $)
+            edge[->] +(0, -0.75);
+    \end{tikzpicture}
+    \caption{Array as linked list}
+    \label{fig:struct:array_list1}
+\end{figure}
+
+Using an index as the link from one element to the next has some advantages.
+The array where elements are stored can be freely moved from one memory location
+to another, or even serialized/stored/de-serialized and the list will still
+retain its proper order.  Indices can also be made as small as desired/possible.
+However, a much more common design is to use a \emph{pointer} to the next
+element, with a null pointer representing the end of the list.  Figure
+\ref{fig:struct:list} shows the classical singly list implementation, where
+element indices are for clarity and do not represent relative or absolute
+location in memory.
+
+\begin{figure}[ht]
+    \centering
+    \begin{tikzpicture}[rectangle/.style={minimum height = 2em}]
+        \matrix[column sep = 1.5em] {
+            \node (n0) [lnode] {\nodepart{two} \&0}; &
+            \node (n1) [lnode] {\nodepart{two} \&1}; &
+            \node (n2) [lnode] {\nodepart{two} \&2}; &
+            \node (n3) [lnode] {\nodepart{two} \&3}; &
+            \node (n4) [lnode] {\nodepart{two} \&4}; &
+            \node (n5) [lnode] {\nodepart{two} \&5}; &
+            \node (n6) [lnode] {\nodepart{two} \&6}; &
+            \node (n7) [lnode] {\nodepart{two} 0}; \\
+            \node {0}; & \node {1}; & \node {2}; & \node {3}; &
+            \node {4}; & \node {5}; & \node {6}; & \node {7}; \\
+        };
+        \draw ($ (n0) - (1, 0) $) edge[->] (n0.west);
+        \draw (n0.east) edge[->] (n1.west);
+        \draw (n1.east) edge[->] (n2.west);
+        \draw (n2.east) edge[->] (n3.west);
+        \draw (n3.east) edge[->] (n4.west);
+        \draw (n4.east) edge[->] (n5.west);
+        \draw (n5.east) edge[->] (n6.west);
+        \draw (n6.east) edge[->] (n7.west);
+    \end{tikzpicture}
+    \caption{Linked list with pointers}
+    \label{fig:struct:list}
+\end{figure}
+
+Using pointers further dissociates the implementation of the list from the
+underlying storage, as elements still can but are no longer required to be
+contiguous and can instead be placed anywhere in memory.  In this type of
+implementation, list elements are often referred to as \textit{nodes}.  Several
+allocation strategies can be used depending on the context, ranging from
+dynamically allocating every element individually, to using blocks or pools, to
+using a single array as above.  These all have different advantages and
+disadvantages in terms of number of allocations, total memory usage, asymptotic
+complexity of operations, iterator invalidation, memory coherence, etc.
+
+Since links are just pointers and can be dereferenced directly, it is no longer
+required to keep the list head during iteration.  In fact, iteration can start
+at any element of the list given just its memory address.  This makes linked
+lists a good candidate for storage in a library that exposes pointers to
+(sub-)objects, as the list element can remain in place when others are
+added/removed and can be reached easily from the pointer given to the client.
+Furthermore, the list head and the next pointer of each element are now the same
+type of value, which simplifies the implementation of many list operations, as
+we will see.
+
+The simplest way to guarantee a list node can be reached from a pointer to the
+value it is contained in is to make the value ``inherit from'' it\footnotemark,
+either directly or via an intermediary structure.  This works, since a pointer
+to an object of a given type can always be converted to a pointer to an object
+of a type it is a strict subset of, but has several disavantages.  It forces the
+node pointer to be the first element of the value structure, which imposes a
+restriction on how fields can be ordered to improve structure layout and cache
+utilization.  It also prevents a value from being placed in more than one list
+at a time.
+
+\footnotetext{
+    V. section \secref{sec:c++:oop} for a detailed analysis of the patterns
+    described in the next paragraphs.}
+
+The alternative, used heavily in the Linux kernel (\cite{Brown2009}), is to
+place the list node structure anywhere in the contained value and use the
+\texttt{container\_of} macro function to offset the node pointer and reach the
+value.  Since both the list head and the nodes are of type \texttt{struct
+node*}, they can be treated homogeneously to implement several list operations
+(listing \ref{lst:struct:list_ops}).
+
+\lstinputlisting[
+    style=c,
+    caption={Linked list operations},
+    label={lst:struct:list_ops},
+    firstline=6,
+]{struct/list/ops.c}
+
+\subsubsection{Performance}
+
+The flexibility to easily store and manipulate lists comes at a cost.  As stated
+in section \secref{subsec:arch:cache}, modern processors are optimized for
+sequential, predictable memory loads.  Contiguous (or mostly contiguous) data
+structures such as arrays can be processed very quickly, for two reasons.
+First, more than one element can be loaded from main memory or data caches at
+once if they are in the same cache line.  Second, since the address of the next
+element is always known in advance: each element is at a fixed offset from the
+previous: an optimizing compiler or super-scalar processor can issue the memory
+loads for an element before the current one is processed, reducing the latency
+when processing each element and improving overall throughput.
+
+In the case of a list, the address of the next element is not known until the
+current one is examined.  This is a direct data dependency, which means fetching
+and processing elements has to be a serial operation.  Since reordering elements
+merely manipulates the links and does not reorder them in memory, iterating over
+a list can quickly turn into random memory accesses.  Certain types of list
+storage also have the potential to spread elements throughout memory with little
+coherency.  For all these reasons, even though theoretically the iteration over
+an array and a list have the same time complexity ($\text{O}(n)$), the former is
+likely to be significantly faster in a modern processor.
+
+One mitigation in certain cases is to place an explicit software prefetch
+instruction in the iteration code.  This can in some cases mitigate the latency
+of the memory load and result in better interleaving of iteration and processing
+code\footnotemark.
+
+\footnotetext{
+    V. commit \texttt{75d65a425c0163d3ec476ddc12b51087217a070c} in the Linux
+    kernel, which removed this type of software prefetching in the common list
+    functions, for subtle cases where this can result in \emph{slower} code.}
+
+\begin{lstlisting}
+for(struct node *n = l; prefetch(n->next), n; n = n->next)
+    // ...
+\end{lstlisting}
+
+\subsection{Exercises}
+
+\begin{enumerate}
+    \item
+        \label{ex:struct:list_reverse}
+        Given the definition of a list below, implement the function
+        \texttt{list\_reverse}, which is given a list and reverses the order of
+        the nodes in place, returning the head of the new list.
+        \begin{lstlisting}[style=c]
+struct node {
+    struct node *next;
+    int value;
+};
+
+struct node *list_reverse(struct node *n);
+        \end{lstlisting}
+    \item
+        \label{ex:struct:list_remove}
+        Given the definition of a list in exercise \ref{ex:struct:list_reverse},
+        implement the function \texttt{list\_remove}, which is given a list and
+        a value and removes from the list the first node that contains that
+        value, returning a pointer to the removed node or \texttt{NULL} if the
+        value is not found.
+        \begin{lstlisting}[style=c]
+struct node *list_remove(struct node **l, int value);
+        \end{lstlisting}
+\end{enumerate}

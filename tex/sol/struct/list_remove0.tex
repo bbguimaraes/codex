@@ -1,0 +1,56 @@
+\begin{tikzpicture}[
+        every node/.style = {minimum height = 16px},
+        code/.style = {align = center, font = \small},
+        >={Stealth[round]},
+    ]
+    \node (obj0) [object = 2] at (0, 4.5) {
+        \vrule height 0.5em depth 0.25em width 0pt
+        \itshape obj
+        \nodepart{two} \vrule height 0.5em depth 0.25em width 0pt
+        head
+    };
+    \node (obj1) [object = 2] at (0, 0) {
+        \vrule height 0.5em depth 0.25em width 0pt
+        \itshape obj
+        \nodepart{two} \vrule height 0.5em depth 0.25em width 0pt
+        head
+    };
+    \node (n0_0) [lnode, right = of obj0.two east] {0};
+    \node (n1_0) [lnode, right = of n0_0] {1};
+    \node (n2_0) [lnode, right = of n1_0] {2};
+    \node (n0_1) [lnode, right = of obj1.two east] {0};
+    \node (n1_1) [lnode, right = of n0_1] {1};
+    \node (n2_1) [lnode, right = of n1_1] {2};
+    \node (l0) [left = of obj0.two west] {l};
+    \node (l1) [left = of obj1.two west] {l};
+    \node (t0) [code, xshift = 2.5em] at (-1.5, 2) {
+        \texttt{(*l)->value == 0} \\
+        \texttt{obj.head->value == 0} \\
+        \texttt{(*obj.head).value == 0} \\
+        \texttt{n0.value == 0}
+    };
+    \node (t1) [code, right = of t0] {
+        \texttt{*l = (*l)->next} \\
+        \texttt{obj.head = (*obj.head).next} \\
+        \texttt{obj.head = n0.next} \\
+        \texttt{obj.head = \&n1}
+    };
+    \node [below = of n0_0, yshift = 2.5em] {n0};
+    \node [below = of n1_0, yshift = 2.5em] {n1};
+    \node [below = of n2_0, yshift = 2.5em] {n2};
+    \node [below = of n0_1, yshift = 2.5em] {n0};
+    \node [below = of n1_1, yshift = 2.5em] {n1};
+    \node [below = of n2_1, yshift = 2.5em] {n2};
+    \draw[->] (t0) -- (t1);
+    \draw[->] (n0_0) -- (n1_0);
+    \draw[->] (n1_0) -- (n2_0);
+    \draw[->] (n0_1) -- (n1_1);
+    \draw[->] (n1_1) -- (n2_1);
+    \draw[->] (l0) -- (obj0.two west);
+    \draw[->] (l1) -- (obj1.two west);
+    \draw[->] (obj0.two east) -- (n0_0);
+    \draw[->]
+        (obj1.two east)
+        .. controls ($ (n0_1) + (0, 4em) $) and +(0, 0)
+        .. (n1_1.west);
+\end{tikzpicture}

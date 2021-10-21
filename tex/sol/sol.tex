@@ -1,3 +1,211 @@
+\paragraph{\ref{ch:algo}.\ref{ex:algo:bsearch_middle}}
+
+The expression \texttt{m = b + (e - b) / 2} is a bit unusual but a
+mathematically correct way to obtain a value that is exactly between \texttt{b}
+and \texttt{e}.  In the context of a binary search, \texttt{b} and \texttt{e}
+are integer indices, not continuous variables, so it must be proven that the
+expression correctly partitions the half-closed interval in two for every
+possible value of \texttt{b} and \texttt{e}.
+
+The base case of a range of length zero is trivial: both \texttt{b} and
+\texttt{e - b} equal zero, so \texttt{m} is also zero\footnotemark.  $[b, m)$
+and $[m, e)$ are both $[0, 0)$, are correct ranges, and the partition is in the
+"middle".  As the size of the ranges increases, two cases are of interest: odd
+and even lengths.  When the length of the range is even, the rounding division
+is redundant since it is no different than regular division, which can be shown
+to be equivalent to the original expression:
+
+\footnotetext{
+    Recall that, as mentioned in section \secref{subsec:algo:ranges}, the length
+    calculation for half-open ranges is very simple: $|[b, e)| = e - b$.}
+
+\begin{multicols}{3}
+    \begin{align*}
+        m &= b + \frac{e - b}{2} \\
+          &= \frac{2b + e - b}{2} \\
+          &= \frac{b + e}{2} \\
+    \end{align*}
+    \columnbreak
+    \begin{align*} \\
+        |[b, m)| &= m - b \phantom{\frac{1}{1}} \\
+                 &= \frac{b + e}{2} - b \\
+                 &= \frac{e - b}{2} \\
+    \end{align*}
+    \columnbreak
+    \begin{align*} \\
+        |[m, e)| &= e - m \phantom{\frac{1}{1}} \\
+                 &= e - \frac{b + e}{2} \\
+                 &= \frac{e - b}{2} \\
+    \end{align*}
+\end{multicols}
+
+E.g.: partitioning the array \texttt{[0, 1, 2, 3]}, assuming for simplicity in
+all examples that \texttt{b} is the beginning of the array at address
+\texttt{0}, gives:
+
+\begin{align*}
+           m &= \frac{b + e}{2}
+              = \frac{4}{2}
+              = 2 \\\\
+             &= b + \frac{e - b}{2}
+              = 0 + \frac{4 - 0}{2}
+              = \frac{4}{2}
+              = 2 \\\\
+    |[b, m)| &= m - b = 2 \\
+    |[m, e)| &= e - m = 2 \\
+\end{align*}
+
+In the case of a range with odd length, one of the two sub-ranges has to have an
+extra element.  Due to rounding, that is the second one since, for this case:
+
+\begin{align*}
+    \left\lfloor \frac{e - b}{2} \right\rfloor = \frac{e - b - 1}{2} \\
+\end{align*}
+
+This is safe for ranges of positive, odd length since $0 < e - b$.  The two
+ranges are then:
+
+\begin{align*}
+                     m &= b + \left\lfloor \frac{e - b}{2} \right\rfloor
+                        = \frac{2b + e - b - 1}{2}
+                        = \frac{b + e - 1}{2} \\\\
+              |[b, m)| &= m - b
+                        = \frac{b + e - 1}{2} - b
+                        = \frac{e - b - 1}{2} \\\\
+              |[m, e)| &= e - m
+                        = e - \frac{b + e - 1}{2}
+                        = \frac{e - b + 1}{2} \\\\
+    |[m, e)| - |[b, m) &= \frac{(e - b + 1) - (e - b - 1)}{2}
+                        = \frac{2}{2}
+                        = 1 \\
+\end{align*}
+
+E.g. for \texttt{[0, 1, 2]}:
+
+\begin{align*}
+          m &= 0 + \frac{3 - 0}{2}
+             = \bigg \lfloor \frac{3}{2} \bigg \rfloor
+             = 1 \\\\
+    |m - b| &= 1 \qquad |e - m|
+             = 2 \\
+\end{align*}
+
+We have therefore shown the following properties of the middle point expression
+for ranges of different lengths:
+
+\begin{itemize}
+    \item Ranges of length zero remain the same.
+    \item Ranges of even length are split evenly.
+    \item
+        Ranges of odd length are split into two ranges of even and odd length,
+        respectively.
+    \item
+        For all lengths, the two resulting ranges are a sub-range of the
+        original.
+\end{itemize}
+
+\paragraph{\ref{ch:algo}.\ref{ex:algo:bsearch_overflow}}
+
+There are two problems with this alternative expression.  As we have seen in
+section \secref{sec:c:ub}, pointer arithmetic is only valid inside the bounds of
+an array, up to and including one past its end.  Therefore the expression
+\texttt{b + e} is undefined since it is outside the defined bounds for any range
+where \texttt{b} is not zero (practically, no object is ever stored at address
+zero in most architectures).
+
+Even if that were not the case, a second problem occurs when either \texttt{b}
+or \texttt{e} are close to the end of the range of memory addresses.  Assuming
+an architecture where pointers and integers are interconvertible for
+illustrative purposes, if \texttt{e == (void*)SIZE\_MAX}, any non-zero value of
+\texttt{b} will result in overflow, yielding an incorrect result after the
+division and addition.
+
+This problem does not exist in the original expression, as \texttt{e - b <= e}
+and therefore a valid value as long as the value of the difference can be
+represented by the \texttt{ptrdiff\_t} type.
+
+\paragraph{\ref{ch:algo}.\ref{ex:algo:bsearch_bound}}
+
+Binary search, lower bound, and upper bound are very similar algorithms, so
+writing one after having written one of the others is simple, but rewriting
+\texttt{binary\_search} requires careful attention to the invariants.
+
+All three have the same iteration pattern: recursive binary partition based on a
+predicate.  The crucial difference is in the comparisons that determine the
+partitions.  As hinted in the exercise description, both lower and upper bound
+allow us to perform a single comparison per iteration and to define the entire
+algorithm in terms of a single comparison function, which makes writing generic
+code (v. section \secrefpar{sec:c++:meta}) easier.
+
+Let us consider the lower bound first.  We note that the conditional where
+\texttt{*m} and \texttt{x} are tested for equality has to be removed, as the
+search must proceed in that case if we are to find the leftmost occurrence.  It
+may be surprising is that this is \emph{all} that is needed to implement the
+algorithm, but if follows naturally from the adjusted loop invariants.
+
+\lstinputlisting[style=c,firstline=8]{algo/lower_bound.c}
+
+A few notable changes:
+
+\begin{itemize}
+    \item
+        As mentioned previously, there is now a single comparison per iteration.
+    \item
+        Furthermore, all comparisons, including in the invariants, use a single
+        operation: less than (this is the reason for the unusual spellings such
+        as \texttt{!(*e < x)}.
+    \item
+        The invariant involving \texttt{e} now allows for \texttt{*e == x}.
+        Similarly, the invariant which stated that \texttt{!lsearch(x, e, ie)}
+        had to be removed.  In both cases, this is because duplicate elements
+        are now allowed in the upper region.
+\end{itemize}
+
+From the last two loop invariants we know that when \texttt{b} is moved, it will
+never point to a value that is greater than \texttt{x}.  Similarly, when
+\texttt{e} is moved, it will never point to a value that is less than
+\texttt{x}.  Then, the intersection of the two, where \texttt{b} is moved to
+\texttt{e} in the final iteration of the loop (or when \texttt{e} is moved to
+\texttt{b}, if \texttt{x} is smaller than all values in the range), must be the
+lower bound.
+
+Computing the upper bound follows a similar process.  All that is required is to
+also choose the upper region of the range when \texttt{*m == x}.  We spell
+the condition as \texttt{!(x < *m)} instead of \texttt{*m <= x} for the same
+reason cited above.
+
+\lstinputlisting[style=c]{algo/upper_bound.c}
+
+To rewrite \texttt{binary\_search}, we note that the return value of
+\texttt{lower\_bound} must be one of three cases:
+
+\begin{itemize}
+    \item
+        \texttt{x} is larger than all values in the range.  The lower bound is
+        \texttt{e}.
+    \item \texttt{x} is in the range.  The element returned is equal to it.
+    \item
+        \texttt{x} is not in the range but smaller than some of the values in
+        it.  The element returned is the beginning of the sequence that is
+        greater than it.
+\end{itemize}
+
+\begin{lstlisting}[style=c]
+bool bsearch(int x, int *b, int *e) {
+    b = lower_bound(x, b, e);
+    return b != e && !(x < *b);
+}
+\end{lstlisting}
+
+Similarly for \texttt{upper\_bound}:
+
+\begin{lstlisting}[style=c]
+bool bsearch(int x, int *b, int *e) {
+    e = upper_bound(x, b, e);
+    return e != b && !(e[-1] < x);
+}
+\end{lstlisting}
+
 \paragraph{\ref{ch:struct}.\ref{ex:struct:list_reverse}}
 
 There are several ways to conceptualize the operations involved in the reversal

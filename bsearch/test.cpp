@@ -3,21 +3,21 @@
 #include <array>
 #include <sstream>
 
-extern "C" {
-#include "bsearch.h"
-}
-
-using bsearch_fn = bool(int, const int*, const int*);
-
-Q_DECLARE_METATYPE(bsearch_fn*)
-Q_DECLARE_METATYPE(std::size_t)
+#include "bsearch.hpp"
 
 namespace {
 
-constexpr std::array v = {0, 1, 2, 3, 4, 5, 6, 7};
-constexpr std::array fns = {bsearch0, bsearch1, bsearch2, bsearch3};
+using T = int;
+using V = std::array<T, 8>;
+using I = typename V::const_iterator;
+using bsearch_fn = bool(I, I, const T&);
+constexpr V v = {0, 1, 2, 3, 4, 5, 6, 7};
+constexpr std::array fns = {codex::bsearch<I, I, T>, std::binary_search<I, T>};
 
 }
+
+Q_DECLARE_METATYPE(bsearch_fn*)
+Q_DECLARE_METATYPE(std::size_t)
 
 void BSearchTest::test_data() {
     QTest::addColumn<bsearch_fn*>("f");
@@ -42,7 +42,7 @@ void BSearchTest::test() {
     QFETCH(const std::size_t, bi);
     QFETCH(const std::size_t, ei);
     const auto *p = v.data() + bi, *e = v.data() + ei;
-    QCOMPARE(f(x, p, e), lsearch(x, p, e));
+    QCOMPARE(f(p, e, x), std::find(p, e, x) != e);
 }
 
 QTEST_MAIN(BSearchTest)

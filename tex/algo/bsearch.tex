@@ -1,2 +1,260 @@
 \section{Binary search}
 \label{sec:algo:bsearch}
+
+Even though it may seem that examining every item in an array is required to
+determine whether an element is present in it, the process can be significantly
+improved, provided that the sequence is sorted in advance.  In that case, vast
+portions of it can be eliminated with each comparison, a technique generally
+known as \textit{divide-and-conquer}.  This provides a great advantage in cases
+where searches are much more common than modifications to the sequence of items
+--- i.e. where the cost of sorting the sequence can be paid once and the result
+used by a number of searches.
+
+The critical aspect of the implementation is to examine the \emph{middle}
+element of the sequence.  If it is \emph{less} than the desired value, the
+entire lower half of the array can be ignored.  Conversely, if it is
+\emph{greater} than the desired value, the entire upper half can be ignored.
+The process is then repeated until the result is found or the range becomes
+empty.
+
+Due to this process of halving in each iteration, this algorithm is called a
+\textit{binary search}, and is a dramatic improvement over a linear search.  For
+a sequence of $2^n$ elements, a linear search has to examine at worst all $2^n$
+elements.  A binary search will reduce the search space to $2^{n-1}$ after the
+first iteration, $2^{n-2}$ after the second, and so on, until it reaches $2^0 =
+1$, resulting in only $n+1$ iterations\footnotemark.
+
+\footnotetext{
+    Section \secref{sec:algo:comp} explores the implications of this difference
+    in much more detail.}
+
+Figure \ref{fig:algo:bsearch0} shows one execution of a binary search on the
+array \texttt{[0, 1, 2, 3, 5, 6, 7, 8]} for the value \texttt{3}.  The first
+middle value is \texttt{5}, which is greater than the desired value, so the
+upper portion of the array is eliminated.  The next middle value is \texttt{2},
+which is less than the desired value, so the lower portion of the remaining
+range is eliminated.  The last middle value is \texttt{3}, which is the desired
+value, so the search ends.  Figure \ref{fig:algo:bsearch1} shows the search on
+the same array for the value \texttt{4}, which is similar up to the last step,
+where \texttt{x} is greater than \texttt{*m}, so the range becomes empty.
+
+\begin{figure}[p]
+    \centering
+    \lstinputlisting[
+        style=c,
+        firstline=8,
+        caption={Binary search},
+        label={lst:algo:bsearch},
+    ]{algo/bsearch.c}
+    \vspace{2\baselineskip}
+    \begin{subfigure}[h]{\textwidth}
+        \centering
+        \input{algo/bsearch0}
+        \caption{\texttt{bsearch(3, b, e)}}
+        \label{fig:algo:bsearch0}
+    \end{subfigure}
+    \\[\baselineskip]
+    \begin{subfigure}[h]{\textwidth}
+        \centering
+        \input{algo/bsearch1}
+        \caption{\texttt{bsearch(4, b, e)}}
+        \label{fig:algo:bsearch1}
+    \end{subfigure}
+    \caption{Binary search}
+\end{figure}
+
+Listing \ref{lst:algo:bsearch} shows the complete implementation.  It starts by
+establishing the function preconditions and the loop termination condition.  The
+inputs will be the value \texttt{x} to search for and the half-open interval
+$\texttt{[b, e)}$ delimiting the sorted range.  The terminating condition as
+described previously is that the range being examined becomes empty.  The
+assertions after the loop are the same as the ones inside it, as will be
+described next.
+
+\lstinputlisting
+    [style=c,linerange=8-11,belowskip=0pt]
+    {algo/bsearch.c}
+\begin{lstlisting}[aboveskip=0pt,belowskip=0pt]
+        // ...
+\end{lstlisting}
+\lstinputlisting
+    [style=c,linerange=24-30,aboveskip=0pt]
+    {algo/bsearch.c}
+
+The loop body starts with the invariants:
+
+\lstinputlisting
+    [style=c,linerange=12-15]
+    {algo/bsearch.c}
+
+\vspace{-\baselineskip}
+\begin{itemize}
+    \item
+        Any reduced range should be within the bounds of the original and in the
+        correct sequence.
+    \item
+        As the input range is repeatedly reduced, we guarantee \texttt{x} is not
+        in any of the eliminated regions --- those now outside $\texttt{[b, e)}$.
+    \item
+        As \texttt{b} is moved right, it should always delimit elements that are
+        less than \texttt{x}.
+    \item
+        Similarly, as \texttt{e} is moved left, it should always delimit
+        elements that are greater than \texttt{x}.
+\end{itemize}
+
+From these and the loop termination condition that \texttt{b == e}, the
+following inferences can be made about the value of \texttt{b} at the bottom of
+the function:
+
+\begin{itemize}
+    \item
+        $ib = ie \ \implies \ x \notin [ib, ie)$
+        \begin{itemize}
+            \item \texttt{x} cannot be in the range since it is empty
+        \end{itemize}
+    \item
+        $b = ib \ \implies \ x \notin [ib, ie)$
+        \begin{itemize}
+            \item $x < *e \ \implies \ x < *ib$
+            \item
+                \texttt{x} cannot be in a sorted range if it is less than the
+                first element
+        \end{itemize}
+    \item
+        $e = ie \ \implies \ x \notin [ib, ie)$
+        \begin{itemize}
+            \item $b[-1] < x \ \implies e[-1] < x$
+            \item
+                \texttt{x} cannot be in a sorted range if the last element is
+                less than it
+        \end{itemize}
+    \item
+        otherwise $\implies \ x \notin [ib, ie)$
+        \begin{itemize}
+            \item $x < *e \ \implies \ x < *b$
+            \item $b[-1] < x$
+            \item
+                \texttt{x} cannot be in a sorted range if $b[-1] < x$ and $x <
+                b[0]$
+        \end{itemize}
+\end{itemize}
+
+That is, as long as the invariants are maintained, exiting the loop means
+\texttt{x} is not contained in the range.  This is reflected in the assertions
+at the bottom of the function.  The implementation of the loop begins by
+determining the middle element of the range.  This is done by computing its
+length and using integer division to halve it while rounding down.\footnotemark.
+
+\footnotetext{
+    The difference is first converted to an unsigned value, since we know it is
+    positive, so that the division by a power of two can be translated to a few
+    simple bitwise operations.  Integer division rounds values towards zero,
+    while division using shifts rounds towards negative infinity.  Converting a
+    value to unsigned eliminates special cases in the generated machine code
+    since those two cases have the same outcome for positive values.}
+
+\lstinputlisting[style=c,linerange=16-17]{algo/bsearch.c}
+
+Next, the middle value is compared to \texttt{x}: if it is equal, the value has
+been found\footnotemark.  Otherwise, the search range is modified according to
+the rules described previously.
+
+\footnotetext{See exercise \ref{ex:algo:bsearch_bound}}
+
+\lstinputlisting[style=c,linerange=18-23]{algo/bsearch.c}
+
+We can observe that the invariants are preserved in both branches that advance
+to the next iteration:
+
+\begin{multicols}{2}
+    \texttt{*m < x}
+    \begin{align*}
+        ib \leq b' & \impliedby
+        \begin{cases}
+            b' = m \\
+            ib \leq b \\
+            b \leq m \\
+        \end{cases}
+        \\
+        b' \leq ie & \impliedby
+        \begin{cases}
+            b' = m + 1 \\
+            m  < e \\
+            e \leq ie \\
+        \end{cases}
+        \\
+        b'[-1] < x & \impliedby
+        \begin{cases}
+            b' = m + 1 \\
+            *m < x \\
+        \end{cases}
+    \end{align*}
+    \\
+    \columnbreak
+    \\
+    \texttt{*m > x}
+    \begin{align*}
+        ib \leq e' & \impliedby
+        \begin{cases}
+            e' = m \\
+            ib \leq b \\
+            b \leq m \\
+        \end{cases}
+        \\
+        e' \leq ie & \impliedby
+        \begin{cases}
+            e' = m \\
+            m < e \\
+        \end{cases}
+        \\
+        x < *e' & \impliedby
+        \begin{cases}
+            e' = m \\
+            *m \neq x \\
+            x < *m \\
+        \end{cases}
+    \end{align*}
+\end{multicols}
+
+\subsection{Exercises}
+
+\begin{enumerate}[label*=\arabic*.]
+    \item
+        \label{ex:algo:bsearch_middle}
+        Prove that the expression \texttt{m = b + (e - b) / 2} correctly
+        calculates the middle element of a range.
+    \item
+        \label{ex:algo:bsearch_overflow}
+        A more common mathematical definition of the middle element would be
+        \texttt{m = (b + e) / 2}.  Could that be used in our implementation of
+        binary search?  Prove the answer and give examples.
+    \item
+        \label{ex:algo:bsearch_bound}
+        Our version of binary search works and is significantly faster than
+        linear search, but it performs two comparisons per iteration.  A
+        closely-related fact is that it will return on the first element that is
+        found to be equal to the input.
+
+        Often, the range can have duplicate values and it is desired to find
+        either the first position where a value occurs or the position after its
+        last occurrence, e.g. to find the place where a new element should be
+        inserted to keep the range sorted.  These two algorithms are called
+        lower and upper bound.  More specifically, lower bound returns the
+        position that partitions the range into elements that are \texttt{< x},
+        while upper bound returns the position that partitions the range into
+        elements that are \texttt{> v}.  For the array \texttt{[0, 1, 3, 3, 3,
+        5, 6]}, the lower bound for value \texttt{3} is position \texttt{2},
+        while the upper bound is position \texttt{5}.  These are the same
+        results for the lower bound for value \texttt{2} and the upper bound for
+        value \texttt{4}.
+
+        Implement both versions and then rewrite the \texttt{binary\_search}
+        function in terms of \texttt{lower\-\_bound}, all with suitable
+        invariants.
+
+        \begin{lstlisting}[style=c]
+        int *lower_bound(int x, int *b, int *e);
+        int *upper_bound(int x, int *b, int *e);
+        \end{lstlisting}
+\end{enumerate}

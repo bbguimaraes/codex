@@ -1,0 +1,57 @@
+\begin{subfigure}[h]{0.3\textwidth}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw] {0}; &
+            \node (n1) [rectangle, draw] {1}; &
+            \node (n2) [rectangle, draw] {2}; &
+            \node (n3) [rectangle, draw] {3}; &
+            \node (n4) [rectangle, draw] {5}; &
+            \node (n5) [rectangle, draw] {6}; &
+            \node (n6) [rectangle, draw] {7}; &
+            \node (n7) [rectangle, draw] {8}; \\
+        };
+        \node (b) at ($ (n0.south west) - (0, 0.75) $) {b};
+        \node (m) at ($ (n4.south west) - (0, 0.75) $) {m};
+        \node (e) at ($ (n7.south east) - (0, 0.75) $) {e};
+        \draw[->] (b) -- ($ (n0.south west) - (0, 0.1) $);
+        \draw[->] (m) -- ($ (n4.south west) - (0, 0.1) $);
+        \draw[->] (e) -- ($ (n7.south east) - (0, 0.1) $);
+    \end{tikzpicture}
+\end{subfigure}
+\ldots \qquad
+\begin{subfigure}[h]{0.3\textwidth}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw] {0}; &
+            \node (n1) [rectangle, draw] {1}; &
+            \node (n2) [rectangle, draw] {2}; &
+            \node (n3) [rectangle, draw] {3}; &
+            \node (n4) [rectangle, draw] {5}; &
+            \node (n5) [rectangle, draw] {6}; &
+            \node (n6) [rectangle, draw] {7}; &
+            \node (n7) [rectangle, draw] {8}; \\
+        };
+        \node (b) at ($ (n3.south west) - (0.1, 0.8) $) {b/m};
+        \node (e) at ($ (n4.south west) - (0, 0.75) $) {e};
+        \draw[->]
+            ($ (b.north) + (0.1, 0) $)
+            -- ($ (n3.south west) - (0, 0.1) $);
+        \draw[->] (e) -- ($ (n4.south west) - (0, 0.1) $);
+    \end{tikzpicture}
+\end{subfigure}
+\begin{subfigure}[h]{0.3\textwidth}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw] {0}; &
+            \node (n1) [rectangle, draw] {1}; &
+            \node (n2) [rectangle, draw] {2}; &
+            \node (n3) [rectangle, draw] {3}; &
+            \node (n4) [rectangle, draw] {5}; &
+            \node (n5) [rectangle, draw] {6}; &
+            \node (n6) [rectangle, draw] {7}; &
+            \node (n7) [rectangle, draw] {8}; \\
+        };
+        \node (b) at ($ (n4.south west) - (0, 0.75) $) {b/e};
+        \draw[->] (b) -- ($ (n4.south west) - (0, 0.1) $);
+    \end{tikzpicture}
+\end{subfigure}

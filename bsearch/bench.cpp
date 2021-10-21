@@ -3,15 +3,19 @@
 #include <random>
 #include <sstream>
 
-extern "C" {
-#include "bsearch.h"
+#include "bsearch.hpp"
+
+namespace {
+
+using T = int;
+using V = std::vector<int>;
+using I = typename V::const_iterator;
+using bsearch_fn = bool(I, I, const T&);
+constexpr std::array fns = {codex::bsearch<I, I, T>, std::binary_search<I, T>};
+
 }
 
-using bsearch_fn = bool(int, const int*, const int*);
-
 Q_DECLARE_METATYPE(bsearch_fn*)
-
-static constexpr std::array fns = {bsearch0, bsearch1, bsearch2, bsearch3};
 
 void BSearchBench::initTestCase() {
     const auto n = static_cast<int>(this->expected.size());
@@ -39,10 +43,10 @@ void BSearchBench::bench_data() {
 void BSearchBench::bench() {
     QFETCH(bsearch_fn *const, f);
     const auto n = this->expected.size();
-    const int *const b = &*this->v.begin(), *const e = &*this->v.end();
+    const auto b = this->v.begin(), e = this->v.end();
     QBENCHMARK {
         for(std::size_t i = 0; i < n; ++i)
-            QCOMPARE(f(static_cast<int>(i), b, e), this->expected[i]);
+            QCOMPARE(f(b, e, static_cast<int>(i)), this->expected[i]);
     }
 }
 

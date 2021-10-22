@@ -2,3 +2,33 @@
 
 \subsection{Ordering}
 \label{subsec:algo:ordering}
+
+\subsection{Selection sort}
+
+\begin{figure}[p]
+    \centering
+    \lstinputlisting[
+        style=c++,
+        firstline=7,
+        caption={Selection sort},
+        label={lst:algo:selection},
+    ]{algo/sort/selection.cpp}
+    \vspace{2\baselineskip}
+    \input{algo/sort/selection.tex}
+    \caption{Selection sort}
+    \label{fig:algo:selection}
+\end{figure}
+
+One of the simplest sorting algorithms is \textit{selection sort}, which works
+by progressively sorting the left side of the range one element at a time
+(figure \ref{fig:algo:selection}).  In each iteration, the minimum value in the
+unsorted portion is found (\emph{selected}) and placed at the beginning,
+increasing the size of the sorted range by one element.  When all positions of
+the range have gone through this procedure, the range is sorted.
+
+The implementation of the algorithm follows naturally from this description
+(listing \ref{lst:algo:selection}).  In each iteration, the beginning of the
+range is guaranteed to already be sorted.  The minimum element of the rest of
+the unsorted range is found, swapped with the element at the beginning of the
+range, guaranteeing that the range is now partitioned with respect to the
+selected element.

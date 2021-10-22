@@ -11,10 +11,11 @@ WARNINGS := -Wall -Wextra -Wpedantic -Wconversion
 CFLAGS := -std=c18 $(WARNINGS)
 CXXFLAGS := -std=c++20 $(WARNINGS)
 TEX_INPUT := \
-	codex.bib *.tex */*.tex */*/*.tex */*.c */*/*.c
+	codex.bib *.tex */*.tex */*/*.tex */*.c */*/*.c */*/*.cpp
 LISTINGS := \
 	algo/bsearch.o \
 	algo/lower_bound.o \
+	algo/sort/selection.o \
 	algo/upper_bound.o \
 	concurrency/queue_atomic.o \
 	concurrency/queue_cas.o \

@@ -1,0 +1,180 @@
+\begin{subfigure}[h]{0.3\textwidth}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw] {2}; &
+            \node (n1) [rectangle, draw] {1}; &
+            \node (n2) [rectangle, draw] {7}; &
+            \node (n3) [rectangle, draw] {5}; &
+            \node (n4) [rectangle, draw] {6}; &
+            \node (n5) [rectangle, draw] {0}; &
+            \node (n6) [rectangle, draw] {4}; &
+            \node (n7) [rectangle, draw] {3}; \\
+        };
+        \node (b) at ($ (n0.south west) - (0, 0.75) $) {b};
+        \node (m) at ($ (n5.south west) - (0, 0.75) $) {min};
+        \node (e) at ($ (n7.south east) - (0, 0.75) $) {e};
+        \draw[->] (b) -- ($ (n0.south west) - (0, 0.1) $);
+        \draw[->] (m) -- ($ (n5.south west) - (0, 0.1) $);
+        \draw[->] (e) -- ($ (n7.south east) - (0, 0.1) $);
+    \end{tikzpicture}
+\end{subfigure}
+\quad
+\begin{subfigure}[h]{0.3\textwidth}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw, fill = green!50] {0}; &
+            \node (n1) [rectangle, draw] {1}; &
+            \node (n2) [rectangle, draw] {7}; &
+            \node (n3) [rectangle, draw] {5}; &
+            \node (n4) [rectangle, draw] {6}; &
+            \node (n5) [rectangle, draw] {2}; &
+            \node (n6) [rectangle, draw] {4}; &
+            \node (n7) [rectangle, draw] {3}; \\
+        };
+        \node (b) at ($ (n1.south west) - (0, 0.8) $) {b/min};
+        \node (e) at ($ (n7.south east) - (0, 0.75) $) {e};
+        \draw[->] (b) -- ($ (n1.south west) - (0, 0.1) $);
+        \draw[->] (e) -- ($ (n7.south east) - (0, 0.1) $);
+    \end{tikzpicture}
+\end{subfigure}
+\quad
+\begin{subfigure}[h]{0.3\textwidth}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw, fill = green!50] {0}; &
+            \node (n1) [rectangle, draw, fill = green!50] {1}; &
+            \node (n2) [rectangle, draw] {7}; &
+            \node (n3) [rectangle, draw] {5}; &
+            \node (n4) [rectangle, draw] {6}; &
+            \node (n5) [rectangle, draw] {2}; &
+            \node (n6) [rectangle, draw] {4}; &
+            \node (n7) [rectangle, draw] {3}; \\
+        };
+        \node (b) at ($ (n2.south west) - (0, 0.75) $) {b};
+        \node (m) at ($ (n5.south west) - (0, 0.75) $) {min};
+        \node (e) at ($ (n7.south east) - (0, 0.75) $) {e};
+        \draw[->] (b) -- ($ (n2.south west) - (0, 0.1) $);
+        \draw[->] (m) -- ($ (n5.south west) - (0, 0.1) $);
+        \draw[->] (e) -- ($ (n7.south east) - (0, 0.1) $);
+    \end{tikzpicture}
+\end{subfigure}
+\\[\baselineskip]
+\begin{subfigure}[h]{0.3\textwidth}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw, fill = green!50] {0}; &
+            \node (n1) [rectangle, draw, fill = green!50] {1}; &
+            \node (n2) [rectangle, draw, fill = green!50] {2}; &
+            \node (n3) [rectangle, draw] {5}; &
+            \node (n4) [rectangle, draw] {6}; &
+            \node (n5) [rectangle, draw] {7}; &
+            \node (n6) [rectangle, draw] {4}; &
+            \node (n7) [rectangle, draw] {3}; \\
+        };
+        \node (b) at ($ (n3.south west) - (0, 0.75) $) {b};
+        \node (m) at ($ (n7.south west) - (0, 0.75) $) {min};
+        \node (e) at ($ (n7.south east) - (0, 0.75) $) {e};
+        \draw[->] (b) -- ($ (n3.south west) - (0, 0.1) $);
+        \draw[->] (m) -- ($ (n7.south west) - (0, 0.1) $);
+        \draw[->] (e) -- ($ (n7.south east) - (0, 0.1) $);
+    \end{tikzpicture}
+\end{subfigure}
+\quad
+\begin{subfigure}[h]{0.3\textwidth}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw, fill = green!50] {0}; &
+            \node (n1) [rectangle, draw, fill = green!50] {1}; &
+            \node (n2) [rectangle, draw, fill = green!50] {2}; &
+            \node (n3) [rectangle, draw, fill = green!50] {3}; &
+            \node (n4) [rectangle, draw] {6}; &
+            \node (n5) [rectangle, draw] {7}; &
+            \node (n6) [rectangle, draw] {4}; &
+            \node (n7) [rectangle, draw] {5}; \\
+        };
+        \node (b) at ($ (n4.south west) - (0, 0.75) $) {b};
+        \node (m) at ($ (n6.south west) - (0, 0.75) $) {min};
+        \node (e) at ($ (n7.south east) - (0, 0.75) $) {e};
+        \draw[->] (b) -- ($ (n4.south west) - (0, 0.1) $);
+        \draw[->] (m) -- ($ (n6.south west) - (0, 0.1) $);
+        \draw[->] (e) -- ($ (n7.south east) - (0, 0.1) $);
+    \end{tikzpicture}
+\end{subfigure}
+\quad
+\begin{subfigure}[h]{0.3\textwidth}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw, fill = green!50] {0}; &
+            \node (n1) [rectangle, draw, fill = green!50] {1}; &
+            \node (n2) [rectangle, draw, fill = green!50] {2}; &
+            \node (n3) [rectangle, draw, fill = green!50] {3}; &
+            \node (n4) [rectangle, draw, fill = green!50] {4}; &
+            \node (n5) [rectangle, draw] {7}; &
+            \node (n6) [rectangle, draw] {6}; &
+            \node (n7) [rectangle, draw] {5}; \\
+        };
+        \node (b) at ($ (n5.south west) - (0, 0.75) $) {b};
+        \node (m) at ($ (n7.south west) - (0, 0.75) $) {min};
+        \node (e) at ($ (n7.south east) - (0, 0.75) $) {e};
+        \draw[->] (b) -- ($ (n5.south west) - (0, 0.1) $);
+        \draw[->] (m) -- ($ (n7.south west) - (0, 0.1) $);
+        \draw[->] (e) -- ($ (n7.south east) - (0, 0.1) $);
+    \end{tikzpicture}
+\end{subfigure}
+\\[\baselineskip]
+\begin{subfigure}[h]{0.3\textwidth}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw, fill = green!50] {0}; &
+            \node (n1) [rectangle, draw, fill = green!50] {1}; &
+            \node (n2) [rectangle, draw, fill = green!50] {2}; &
+            \node (n3) [rectangle, draw, fill = green!50] {3}; &
+            \node (n4) [rectangle, draw, fill = green!50] {4}; &
+            \node (n5) [rectangle, draw, fill = green!50] {5}; &
+            \node (n6) [rectangle, draw] {6}; &
+            \node (n7) [rectangle, draw] {7}; \\
+        };
+        \node (b) at ($ (n6.south west) - (0, 0.8) $) {b/min};
+        \node (e) at ($ (n7.south east) - (0, 0.75) $) {e};
+        \draw[->] (b) -- ($ (n6.south west) - (0, 0.1) $);
+        \draw[->] (e) -- ($ (n7.south east) - (0, 0.1) $);
+    \end{tikzpicture}
+\end{subfigure}
+\quad
+\begin{subfigure}[h]{0.3\textwidth}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw, fill = green!50] {0}; &
+            \node (n1) [rectangle, draw, fill = green!50] {1}; &
+            \node (n2) [rectangle, draw, fill = green!50] {2}; &
+            \node (n3) [rectangle, draw, fill = green!50] {3}; &
+            \node (n4) [rectangle, draw, fill = green!50] {4}; &
+            \node (n5) [rectangle, draw, fill = green!50] {5}; &
+            \node (n6) [rectangle, draw, fill = green!50] {6}; &
+            \node (n7) [rectangle, draw] {7}; \\
+        };
+        \node (b) at ($ (n7.south west) - (0.2, 0.8) $) {b/min};
+        \node (e) at ($ (n7.south east) - (0, 0.75) $) {e};
+        \draw[->]
+            ($ (b.north) + (0.2, 0) $)
+            -- ($ (n7.south west) - (0, 0.1) $);
+        \draw[->] (e) -- ($ (n7.south east) - (0, 0.1) $);
+    \end{tikzpicture}
+\end{subfigure}
+\quad
+\begin{subfigure}[h]{0.3\textwidth}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw, fill = green!50] {0}; &
+            \node (n1) [rectangle, draw, fill = green!50] {1}; &
+            \node (n2) [rectangle, draw, fill = green!50] {2}; &
+            \node (n3) [rectangle, draw, fill = green!50] {3}; &
+            \node (n4) [rectangle, draw, fill = green!50] {4}; &
+            \node (n5) [rectangle, draw, fill = green!50] {5}; &
+            \node (n6) [rectangle, draw, fill = green!50] {6}; &
+            \node (n7) [rectangle, draw, fill = green!50] {7}; \\
+        };
+        \node (b) at ($ (n7.south east) - (0, 0.8) $) {b/e};
+        \draw[->] (b) -- ($ (n7.south east) - (0, 0.1) $);
+    \end{tikzpicture}
+\end{subfigure}

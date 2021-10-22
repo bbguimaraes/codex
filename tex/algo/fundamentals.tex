@@ -9,13 +9,63 @@ Throughout this chapter, a number of utility functions will be used in the
 implementation of algorithms.  Some will be described as part of each section,
 but a few basic ones are presented here.
 
+\subsubsection{\texttt{check\_range}}
+
+Verifies that an iterator/sentinel pair represents a valid range.  It is meant
+as a debugging aid and only used in assertions.  The specific test depends on
+the types of the inputs:
+
+\begin{itemize}
+    \item
+        Contiguous and random-access iterators are tested using
+        \texttt{std::distance}, a constant-time operation for those types.
+    \item
+        A forward iterator needs to be advanced until the sentinel is reached,
+        also done using \texttt{std::distance}.  This is an invalid operation
+        for invalid ranges, but so will be their use in the algorithms where
+        \texttt{check\_range} is used.  For this reason, the actual value of the
+        distance does not matter.
+    \item
+        Input iterators cannot be checked, since they only yield their value
+        once.
+\end{itemize}
+
+These cases can be nicely discriminated using constraints and concepts from the
+standard library.
+
+\lstinputlisting[style=c++,linerange=4-14]{algo/fundamentals/utils.hpp}
+\vspace{-\baselineskip}
+
+\subsubsection{\texttt{contains}}
+
+Uses \texttt{check\_range} to determine whether an iterator points to a valid
+element of a range.
+
+\lstinputlisting[style=c++,linerange=16-19]{algo/fundamentals/utils.hpp}
+\vspace{-\baselineskip}
+
 \subsubsection{\texttt{is\_sorted}}
 
 A C version of the same function in the C++ standard library.
 
-\lstinputlisting
-    [style=c,firstline=3,lastline=10]
-    {algo/fundamentals/utils.h}
+\lstinputlisting[style=c,firstline=3,lastline=10]{algo/fundamentals/utils.h}
+\vspace{-\baselineskip}
+
+\subsubsection{\texttt{is\_min\_element}}
+
+Verifies that a given value is the minimum element of a range of values --- i.e.
+that no other element is less than it.  It is conceptually equivalent to
+\texttt{x <= *std::min\_element(b, e)}, but uses the less-than operator and
+stops at the first element for which the assertion does not hold.
+
+\lstinputlisting[style=c++,linerange=21-24]{algo/fundamentals/utils.hpp}
+\vspace{-\baselineskip}
+
+\subsubsection{\texttt{min\_element}}
+
+A reimplementation of \texttt{std::min\_element} for illustrative purposes.
+
+\lstinputlisting[style=c++,linerange=26-40]{algo/fundamentals/utils.hpp}
 \vspace{-\baselineskip}
 
 \subsubsection{\texttt{lsearch}}

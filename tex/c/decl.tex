@@ -1,0 +1,102 @@
+\section{Declarations}
+
+\subsection{Storage}
+
+\label{subsec:c:storage}
+
+Every declaration has a \textit{storage class} associated with it, either
+explicitly (using a \textit{storage class specifier}) or implicitly (context
+dependent).  A class further subdivides in two aspects: \textit{storage
+duration} and \textit{linkage}.  Storage durations, which describe the lifetime
+of variables, are:
+
+\begin{description}
+    \item[Automatic]
+        duration occurs in scopes (i.e. inside functions and blocks).  Variables
+        of this type exist only inside the scope in which it they are declared
+        and their storage is handled by the compiler on the call stack.
+    \item[Static]
+        duration spans the entire execution of the program.  Variables of this
+        type have pre-allocated space in the program and are guaranteed to be
+        initialized before the beginning of the \texttt{main} function.
+    \item[Dynamic]
+        duration has its scope defined by the program.  Variables of this type
+        are allocated and deallocated at runtime using the
+        \texttt{malloc}/\texttt{calloc}/\texttt{realloc}/\texttt{free} functions
+        from the standard library (found in \texttt{<stdlib.h>}).
+    \item[Thread]
+        duration was introduced in C11.  Variables of this type behave similarly
+        to \emph{static} variables, but their duration is tied to the execution
+        of a single thread.  Each thread has its own copy of the variable, which
+        is initialized before the thread is started.
+\end{description}
+
+Linkage types, which describe the parts of the program that have access to them
+(in the linking phase, specifically, hence their name), are:
+
+\begin{description}
+    \item[No linkage]
+        variables are not visible to the linker at all and can only be referred
+        to in the scope where they are declared.
+    \item[Internal linkage]
+        variable are visible only in (i.e. internal to) their translation unit.
+    \item[External linkage] variable are visible to the entire program.
+\end{description}
+
+Every declaration has implicit storage duration and linkage depending on where
+it is placed, which can be changed with storage specifiers:
+
+\begin{description}
+    \item[\texttt{auto}]
+        declares a variable with automatic duration and no linkage.  This is the
+        default for function parameters and local variables.  It is obsolete and
+        was only useful in ancient versions of C where untyped identifiers were
+        assumed to be of type \texttt{int} (and even earlier in BCPL and B,
+        where the only type was word/\texttt{int}\footnotemark).  In that
+        context, \texttt{auto i} could be used to declare an \texttt{int} with
+        automatic duration.
+        \footnotetext{In the beginning was the word.}
+    \item[\texttt{register}]
+        behaves as \texttt{auto}, but requests that the variable be stored in a
+        register.  It was used both as a counterpart to \texttt{auto} in untyped
+        declarations and as an optimization hint in architectures with limited
+        registers, and is similarly obsolete.  The compiler is not mandated to
+        fulfill the request, but even if it does not this type of variable
+        cannot have its address taken (as it may not reside in memory).  This is
+        also the only specifier which can be applied to function parameters.
+    \item[\texttt{static}]
+        declares a variable with static duration.  If applied to a declaration
+        in file scope, that variable has internal linkage.
+    \item[\texttt{extern}]
+        declares a variable with static duration and external linkage.  This is
+        the default for declarations in file scope (external to functions),
+        hence its name.
+    \item[\texttt{thread\_local}]
+        declares a variable with thread duration\footnotemark.  It only applies
+        to objects, either in file or block scope.  For the latter, it must be
+        combined with \texttt{static} or \texttt{extern} to determine the
+        linkage (this type of declaration always has thread duration).
+    \footnotetext{
+        The actual keyword is \texttt{\_Thread\_local}, to comply with the
+        standard's rules for backwards compatibility of identifiers in the
+        global scope.  The \texttt{<threads.h>} header defines
+        \texttt{thread\_local} as an object macro which is replaced with
+        \texttt{\_Thread\_local}.}
+\end{description}
+
+\subsubsection{\texttt{inline}}
+
+One specifier related to linkage is \texttt{inline}.  Its primary purpose is as
+a hint to the compiler that it may be advantageous to inline a function at its
+call site.  With the advances in the optimizer in compilers, this usage is
+virtually obsolete.  It has, however, maintained its other property: an
+\texttt{inline} function may be defined in more than one translation unit,
+making the definition effectively \texttt{static}.  This is necessary since this
+type of function is usually placed in a header file included in many translation
+units.
+
+Note that the behavior of \texttt{inline} in C is subtly different from C++,
+from where it was adopted: there may be one definition of an \texttt{inline}
+function with external linkage.  This results in convoluted rules to determine
+the address of the function and what types of \texttt{static} variables a
+function can declare or has access to.

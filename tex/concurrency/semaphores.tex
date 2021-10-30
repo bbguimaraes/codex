@@ -1,8 +1,94 @@
 \section{Semaphores}
 
+\label{subsec:conc:sem}
+
+A semaphore is a concurrency primitive that limits access to a section of code.
+It can be conceptualized as a simple unsigned integer and associated operations
+to decrement and increment its value, traditionally called \textit{P} and
+\textit{V}\footnotemark.
+
+\footnotetext{
+    The initials used by Edsger W. Dijkstra in the papers that introduced these
+    concepts, thought to be Dutch words used in railway systems that roughly
+    translate to ``passing'' (the noun) and ``release''.}
+
+\begin{description}
+    \item[P]
+        decrements the value of the semaphore.  This operation can be performed
+        as long as the value is greater than zero.  A thread which attempts to
+        decrement a semaphore with value less than or equal to zero is
+        suspended.  This operation is also often called \textit{acquiring} or
+        \textit{locking} the semaphore.
+    \item[V]
+        increments the value of the semaphore.  If there are any suspended
+        threads, one of them is awakened.  This operation is also often called
+        \textit{releasing} or \textit{unlocking} the semaphore.
+\end{description}
+
+From this description, we derive that a semaphore is implemented in terms of a
+counter, a list of suspended threads, and a lower-level primitive to synchronize
+access to them (figure \ref{fig:conc:sem}.  A thread performing a decrement
+first locks the semaphore, then checks the counter.  If it is zero, the thread
+adds itself to the wait list and is suspended; otherwise, it continues
+execution.  A thread performing an increment locks the semaphore, increments the
+value, and pops one thread from the wait list (if it is not empty) and resumes
+it.  In all cases, the thread releases the lock at the end of the operation or
+before being suspended.
+
+\begin{figure}[ht]
+    \centering
+    \begin{tikzpicture}[>={Stealth[round]}]
+        \node (sem) [object = 4] {
+            sem
+            \nodepart{two}lock
+            \nodepart{three}count
+            \nodepart{four}wait
+        };
+        \node (l0) [lnode, right = of sem.four east] {};
+        \node (l1) [lnode, right = of l0] {};
+        \node (l2) [lnode, right = of l1] {};
+        \draw[->] (sem.four east) -- (l0);
+        \draw[->] (l0) -- (l1);
+        \draw[->] (l1) -- (l2);
+    \end{tikzpicture}
+    \caption{Semaphore}
+    \label{fig:conc:sem}
+\end{figure}
+
+The region of code between the semaphore decrement/increment pair of calls must
+usually only be executed by a limited number of threads.  The initial value of
+the semaphore and the semantics of the increment/decrement operations can be
+used to satisfy this constraint.
+
 \subsection{Mutex}
 
 \label{subsec:conc:mutex}
+
+Semaphores whose initial value is \emph{one} are the most common.  The region of
+code such semaphore protects is called a \textit{critical section}, since the
+value of the semaphore guarantees that only a single thread can execute it at
+any point in time.  The code in the critical section is therefore effectively
+\emph{atomic}: the observable behavior is that all of its executions are
+serialized.  A semaphore of this type is referred to as a \textit{binary
+semaphores} or \textit{mutex} (short for \textit{mutual exclusion}).
+
+\subsection{R/W semaphore}
+
+Both the \textit{P}/\textit{V} operations on a semaphore treat the calling
+thread indiscriminately.  Often, however, not all scenarios require strict
+mutual exclusion.  One of the most common is where an unlimited number of
+\emph{readers} is allowed, but only one \emph{writer} should be allowed to enter
+the critical section.  A \textit{read/write semaphore} is a concurrency
+primitive that satisfies these constraints.  Reader threads can acquire the
+semaphore without contention as long as there are no writers.  When a thread
+wishes to acquire the semaphore for writing, it blocks new readers from
+acquiring it and waits until all current readers are done.  From then on, it has
+exclusive access to the semaphore.
+
+This prioritization of writers means readers can be denied access for long
+periods of time (i.e. \textit{reader starvation}).  For this reason, R/W
+semaphores are best suited when reads are frequent and writes are fast and rare,
+but can result in significantly better performance in those cases.
 
 \subsection{\texttt{futex(2)}}
 
@@ -52,3 +138,29 @@ private:
     int val = 0;
 };
 \end{lstlisting}
+
+\subsection{Deadlock}
+
+Whenever a thread attempts to acquire a lock, it may put itself in a situation
+called a \textit{deadlock}.  This happens when the locking operation is blocking
+and results in a situation where no sequence of operations will ever unblock the
+thread and allow for forward progress.  Two common cases of deadlock are when a
+thread attempts to acquire a lock it currently already holds, or when it needs
+to acquire more than one lock.
+
+A \textit{recursive lock} can be re-acquired even if a thread currently holds
+it.  There is often a performance cost to this implementation, so regular locks
+are generally not recursive.  Whether a thread which attempts to lock a
+non-recursive lock while holding it immediately deadlocks or receives an error
+is usually defined by the implementation, but the former case is more common.
+
+Two general strategies exist for the case where multiple locks must be acquired.
+The simplest solution is to establish a hierarchy of locks and guarantee that
+they are always acquired in the same order by all threads.  This prevents
+deadlocks since they are caused by two threads acquiring two different locks
+then attempting to acquire the one just acquired by the opposite thread.
+Another solution when a hierarchy cannot be easily established is to use the
+``speculative locking'' operation commonly provided by implementations, where a
+thread can attempt to acquire a lock without blocking if it is already taken.
+Threads can use this operation when acquiring all locks after the first,
+releasing all of them if it fails and retrying the entire operation.

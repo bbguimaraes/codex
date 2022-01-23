@@ -1,0 +1,139 @@
+\section{Preprocessor}
+
+A preprocessing directive is a line starting with the \textbf{\texttt{\#}}
+character followed by one of the predefined directive names.  The directive
+spans the entire line up to the new-line character.  Any amount of white space
+can precede or succeed the \textbf{\texttt{\#}} character, but any other type of
+preceding character makes that line not a preprocessing directive.  This applies
+even if macro expansion (described later) removes the preceding characters or
+transforms them into white space, so this is one way to write an \texttt{escape}
+macro, useful if a file must be processed more than once:
+
+\begin{lstlisting}[style=c]
+#define ESCAPE
+ESCAPE#define X
+\end{lstlisting}
+
+\subsection{Macro replacement}
+
+Macro replacement is a text substitution facility of the C preprocessor.  As
+other preprocessor directives, it takes place before the text is processed by
+the compiler as C code.  Macro definitions are created via the
+\textbf{\texttt{\#define}} directive and have one of the following forms:
+
+\begin{lstlisting}[style=c]
+#define O object-like macro
+#define F() function-like macro
+\end{lstlisting}
+
+In both cases, \texttt{\#define} is followed by an identifier: the \textit{name}
+of the macro (\texttt{O} and \texttt{F} in this case).  Any subsequent mention
+of the macro's name in the source code is replaced with the \textit{replacement
+text}, the portion of the macro definition which follows its name
+(\texttt{object-like macro} and \texttt{function-like macro} in this case).
+
+\begin{description}
+    \item[Object-like]
+        macros (such as \texttt{O}) are defined when no parentheses immediately
+        follow the name.  Mentions of the name in the source code are replaced
+        with the replacement text, which may be empty.
+        \begin{lstlisting}[style=c]
+O // expands to `object-like macro`
+        \end{lstlisting}
+    \item[Function-like]
+        macros (such as \texttt{F}) are defined when the identifier is
+        immediately followed by parentheses containing zero or more
+        comma-separated identifiers.  Mentions of the name in the source code
+        which are also followed by parentheses (just like in a regular function
+        call) are replaced with the replacement text.  Before the text is
+        replaced, each mention of each parameter in the replacement text is
+        replaced by the argument supplied at the point where the macro was
+        invoked.
+        \begin{lstlisting}[style=c]
+F() // expands to `function-like macro`
+        \end{lstlisting}
+\end{description}
+
+\subsubsection{\texttt{\#undef}}
+
+There is a single namespace for all types of macros.  A name cannot be redefined
+if a definition already exists\footnotemark, but a definition can be removed
+using the \textbf{\texttt{\#undef}} directive.  Following it, the name can again
+be defined as any type of macro.  A macro only affects token processing between
+its corresponding \texttt{\#define} and \texttt{\#undef} directives (or until
+the end of the translation unit, in case no \texttt{\#undef} directive is
+present).
+
+\footnotetext{
+    Multiple definitions of a macro are allowed provided they are all
+    equivalent, which is defined as having the same number, order, spelling, and
+    white-space separation (all white-space separations are considered
+    identical) in their replacement list.  In addition, function-like macros are
+    identical only if they have the same number and spelling of arguments.}
+
+\subsubsection{The \texttt{\#} and \texttt{\#\#} operators}
+
+In the replacement text of function-like macros, any parameter name preceded by
+the \textbf{\texttt{\#}} character is replaced by a textual version of itself,
+instead of literally.  That is, it is effectively placed inside double quotes
+and characters are escaped as necessary to produce a valid string literal.
+Additionally, any sequence of white space characters (including new-line
+characters) not inside string literals is collapsed to a single space character
+and preceding and succeeding white space characters are removed.
+
+Any parameter name preceded or succeeded by \textbf{\texttt{\#\#}} is replaced
+by the tokens that form the argument.  Then, any \textbf{\texttt{\#\#}} in the
+replacement text (not originating from the arguments) is removed and its
+preceding and succeeding tokens are concatenated.  Any two tokens can be
+concatenated as long as the result is also a valid token.
+
+\subsubsection{Variable arguments}
+
+The ellipsis (\textbf{\texttt{...}}) can appear as the last parameter of a
+function-like macro.  This type of macro can be invoked with any number of
+arguments, as long as enough values are provided for the other parameters, if
+they exist.  Trailing arguments that do not correspond to the named parameters
+form the \textit{variable arguments}, which include the separating comma
+characters.  Inside the replacement text, these arguments can be expanded using
+the \textbf{\texttt{\_\_VA\_ARGS\_\_}} identifier.
+
+\subsubsection{Recursive expansion}
+
+A powerful aspect of macro expansion is that whenever a replacement occurs,
+macros are recursively expanded according to the following rules:
+
+\begin{itemize}
+    \item
+        When a parameter (including \texttt{\_\_VA\_ARGS\_\_}) is replaced in
+        the replacement text of a function-like macro, it is examined for macro
+        names, which are fully expanded before the replacement is performed.
+    \item
+        For both object- and function-like macros, the replacement text, along
+        with the subsequent tokens in the source file, is reexamined after
+        expansion for more macro names.
+    \item
+        The concatenation resulting from the application of the \texttt{\#\#}
+        operator happens before the replacement is reexamined, and the result is
+        available for further expansion.
+\end{itemize}
+
+\begin{lstlisting}[style=c]
+#define str(x) #x
+#define f(x) x
+
+// `str` is expanded before `f`
+str(f(0))
+// "f(0)"
+
+#define hash_hash # ## #
+#define str(x) #x
+#define in_between(x) str(x)
+#define join(x, y) in_between(x hash_hash y)
+
+// the `##` produced by expanding `hash_hash` is not the `##` operator
+join(x, y)
+// in_between(x hash_hash y)
+// in_between(x ## y)
+// str(x ## y)
+// "x ## y"
+\end{lstlisting}

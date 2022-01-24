@@ -767,3 +767,376 @@ transitive: $(a \to b) \land (b \to c) \, \implies \, a \to c$.  This can be
 used to build a causal chain of arbitrary length between successive operations
 in two or more threads, each of which is guaranteed to occur after all the
 operations that happen before it.
+
+\subsection{Code generation}
+
+This section will explore the concepts discussed so far in this chapter by
+analyzing the machine code generated for several architectures for the following
+C code\footnotemark:
+
+\footnotetext{
+    Machine code generated using:
+    \begin{itemize}
+        \item x86: \texttt{gcc -std=c11 -O2} (11.2)
+        \item ARMv7: \texttt{clang -march=armv7 -std=c11 -O2} (11.0.1)
+        \item ARMv8: \texttt{gcc -march=armv8-a -std=c11 -O2} (11.2)
+        \item PPC: \texttt{gcc -std=c11 -O2} (9.2.1)
+    \end{itemize}}
+
+\begin{lstlisting}[style=c]
+#include <stdatomic.h>
+
+atomic_int x;
+int load_rlx(void) { return atomic_load_explicit(&x, memory_order_relaxed); }
+int load_acq(void) { return atomic_load_explicit(&x, memory_order_acquire); }
+int load(void) { return atomic_load(&x); }
+void store_rlx(int i) { atomic_store_explicit(&x, i, memory_order_relaxed); }
+void store_rel(int i) { atomic_store_explicit(&x, i, memory_order_release); }
+void store(int i) { atomic_store(&x, i); }
+void xchg_w(int i0, int i1) { atomic_compare_exchange_weak(&x, &i0, i1); }
+void xchg_s(int i0, int i1) { atomic_compare_exchange_strong(&x, &i0, i1); }
+\end{lstlisting}
+
+\subsubsection{x86}
+
+The x86 architecture provides the very strict TSO model.  The only reordering
+allowed is that loads can proceed while stores are being processed.  In
+particular, loads are not reordered with any other loads, stores are not
+reordered with any other stores, and stores are not reordered with previous
+loads.
+
+This means there is no difference between regular loads and load/acquire
+operations: they both translate to the \texttt{mov} instruction, and so all
+\texttt{load} and \texttt{store} functions, except for the sequentially
+consistent store, are simple \texttt{mov}s.  The store/release and
+compare-exchange operations do need specialized instructions, \texttt{xchg} /
+\texttt{lock cmpxchg}, which act as a full barrier (so there is no difference
+between the weak and strong CAS).
+
+\begin{multicols}{2}
+    \begin{lstlisting}[style=x86,xleftmargin=0px,xrightmargin=0px]
+load_rlx: # same for load_acq, load
+    mov eax, DWORD PTR x[rip]
+    ret
+store_rlx: # same for store_rel
+    mov DWORD PTR x[rip], edi
+    ret
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=x86,xleftmargin=0px,xrightmargin=0px]
+store:
+    xchg edi, DWORD PTR x[rip]
+    ret
+xchg_w: # same for xchg_s
+    mov eax, edi
+    lock cmpxchg DWORD PTR x[rip], esi
+    ret
+    \end{lstlisting}
+\end{multicols}
+
+\subsubsection{ARM}
+
+When considering the ARM architecture, revision ARMv8-A and its successors have
+to be analyzed separately.  That is because they introduced specialized
+instructions dedicated to implementing release consistency to conform to the
+C/++11 sequentially consistent atomic types:
+
+\begin{multicols}{3}
+    \begin{lstlisting}[style=arm,xleftmargin=0px,xrightmargin=0px]
+load_rlx:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+    ldr r0, [r3]
+    bx lr
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=arm,xleftmargin=0px,xrightmargin=0px]
+load_acq:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+    lda r0, [r3]
+    bx lr
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=arm,xleftmargin=0px,xrightmargin=0px]
+load:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+    lda r0, [r3]
+    bx lr
+    \end{lstlisting}
+\end{multicols}
+
+\begin{multicols}{3}
+    \begin{lstlisting}[style=arm,xleftmargin=0px,xrightmargin=0px]
+store_rlx:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+    str r0, [r3]
+    bx lr
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=arm,xleftmargin=0px,xrightmargin=0px]
+store_rel:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+    stl r0, [r3]
+    bx lr
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=arm,xleftmargin=0px,xrightmargin=0px]
+store:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+    stl r0, [r3]
+    bx lr
+    \end{lstlisting}
+\end{multicols}
+
+Prior versions, such as ARMv7, require full memory barriers to implement that
+model:
+
+\begin{multicols}{3}
+    \begin{lstlisting}[style=arm,xleftmargin=0px,xrightmargin=0px]
+load_rlx:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+
+    ldr r0, [r3]
+
+    bx lr
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=arm,xleftmargin=0px,xrightmargin=0px]
+load_acq:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+
+    ldr r0, [r3]
+    dmb ish
+    bx lr
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=arm,xleftmargin=0px,xrightmargin=0px]
+load:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+    dmb ish
+    ldr r0, [r3]
+    dmb ish
+    bx lr
+    \end{lstlisting}
+\end{multicols}
+
+\begin{multicols}{3}
+    \begin{lstlisting}[style=arm,xleftmargin=0px,xrightmargin=0px]
+store_rlx:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+
+    str r0, [r3]
+
+    bx lr
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=arm,xleftmargin=0px,xrightmargin=0px]
+store_rel:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+    dmb ish
+    str r0, [r3]
+
+    bx lr
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=arm,xleftmargin=0px,xrightmargin=0px]
+store:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+    dmb ish
+    str r0, [r3]
+    dmb ish
+    bx lr
+    \end{lstlisting}
+\end{multicols}
+
+Also contrary to x86, strong compare-exchange is implemented as a loop in
+machine code, meaning the weak version can be advantageous when it is already
+surrounded by another loop:
+
+\begin{multicols}{2}
+    \begin{lstlisting}[style=arm]
+xchg_w:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+
+    ldaex r2, [r3]
+    cmp r2, r0
+
+    stlexeq ip, r1, [r3]
+
+    bx lr
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=arm]
+xchg_s:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+.L11:
+    ldaex r2, [r3]
+    cmp r2, r0
+    bxne lr
+    stlex ip, r1, [r3]
+    cmp ip, #0
+    bxeq lr
+    b .L11
+    \end{lstlisting}
+\end{multicols}
+
+Additionally, full memory barriers are required for earlier revisions as
+described above:
+
+\begin{multicols}{2}
+    \begin{lstlisting}[style=arm]
+xchg_w:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+    dmb ish
+
+    ldrex r2, [r3]
+    cmp r2, r0
+    it eq
+    strexeq ip, r1, [r3]
+
+
+
+    dmb ish
+    bx lr
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=arm]
+xchg_s:
+    movw r3, #:lower16:x
+    movt r3, #:upper16:x
+    dmb ish
+.L11:
+    ldrex r2, [r3]
+    cmp r2, r0
+    bne .L12
+    strex ip, r1, [r3]
+    cmp ip, #0
+    bne .L11
+.L12:
+    dmb ish
+    bx lr
+    \end{lstlisting}
+\end{multicols}
+
+\subsubsection{PowerPC}
+
+PowerPC also has a relaxed memory model and, similarly to ARMv7, requires memory
+barriers to implement acquire/release operations.
+
+\begin{multicols}{3}
+    \begin{lstlisting}[style=powerpc,xleftmargin=0px,xrightmargin=0px]
+load_rlx:
+    addis 9,2,.LC0@toc@ha
+    ld 9,.LC0@toc@l(9)
+
+    lwz 3,0(9)
+
+
+
+    extsw 3,3
+    blr
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=powerpc,xleftmargin=0px,xrightmargin=0px]
+load_acq:
+    addis 9,2,.LC1@toc@ha
+    ld 9,.LC1@toc@l(9)
+
+    lwz 3,0(9)
+    cmpw 0,3,3
+    bne- 0,$+4
+    isync
+    extsw 3,3
+    blr
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=powerpc,xleftmargin=0px,xrightmargin=0px]
+load:
+    addis 9,2,.LC2@toc@ha
+    ld 9,.LC2@toc@l(9)
+    sync
+    lwz 3,0(9)
+    cmpw 0,3,3
+    bne- 0,$+4
+    isync
+    extsw 3,3
+    blr
+    \end{lstlisting}
+\end{multicols}
+
+\begin{multicols}{3}
+    \begin{lstlisting}[style=powerpc,xleftmargin=0px,xrightmargin=0px]
+store_rlx:
+    addis 9,2,.LC3@toc@ha
+    ld 9,.LC3@toc@l(9)
+
+    stw 3,0(9)
+    blr
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=powerpc,xleftmargin=0px,xrightmargin=0px]
+store_rel:
+    addis 9,2,.LC4@toc@ha
+    ld 9,.LC4@toc@l(9)
+    lwsync
+    stw 3,0(9)
+    blr
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=powerpc,xleftmargin=0px,xrightmargin=0px]
+store:
+    addis 9,2,.LC5@toc@ha
+    ld 9,.LC5@toc@l(9)
+    sync
+    stw 3,0(9)
+    blr
+    \end{lstlisting}
+\end{multicols}
+
+\begin{multicols}{2}
+    \begin{lstlisting}[style=powerpc]
+xchg_w:
+    addis 9,2,.LC5@toc@ha
+    ld 10,.LC5@toc@l(9)
+    sync
+
+    lwarx 9,0,10
+    cmpw 0,9,3
+    bne 0,.L8
+    stwcx. 4,0,10
+
+.L8:
+    isync
+    blr
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=powerpc]
+xchg_s:
+    addis 9,2,.LC6@toc@ha
+    ld 10,.LC6@toc@l(9)
+    sync
+.L10:
+    lwarx 9,0,10
+    cmpw 0,9,3
+    bne 0,.L11
+    stwcx. 4,0,10
+    bne 0,.L10
+.L11:
+    isync
+    blr
+    \end{lstlisting}
+\end{multicols}

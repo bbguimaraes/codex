@@ -3,3 +3,98 @@
 \subsection{Compound literals}
 
 \label{subsec:c:literals}
+
+C99 introduced a type of expression which declares a temporary value of
+aggregate types (i.e.  array, \texttt{struct}, or \texttt{union}), called a
+\textit{compound literal}.  The syntax is visually similar to a cast operation:
+
+\begin{lstlisting}[style=c]
+// Array literal.
+// Note: could also be declared directly as an array in this case.
+// int a[] = {0, 1, 2, 3};
+int *a = (int[]){0, 1, 2, 3};
+// `struct` literal.
+struct S { int i; float f; };
+struct S s = (struct S){.i = 42, .f = 3.1415f};
+// `union` literal.
+union U { int i; float f; };
+union U u = (union U){.f = 3.1415f};
+\end{lstlisting}
+
+This type of literal can be used whenever a value would be defined for a single
+use.  It has the advantage that it does not create an identifier for the value
+which leaks into the surrounding scope.  In fact, there is no way to refer to
+the value unless it is given a name explicitly, either via an assignment or
+function parameter.
+
+\begin{lstlisting}[style=c]
+struct S {};
+void f(struct S);
+// Only `f` has access to the temporary value, via its parameter.
+f((struct S){});
+\end{lstlisting}
+
+The syntax for the declaration of compound literals is similar to that of
+aggregate initialization of a temporary value in C++:
+
+\begin{lstlisting}[style=c++]
+void f(int[]);
+f(std::array{0, 1, 2, 3}.data());
+
+struct S { int i; float f; };
+void f(S);
+f(S{.i = 42, .f = 3.1415f});
+
+union U { int i; float f; };
+void f(U);
+f(U{.f = 3.1415f});
+\end{lstlisting}
+
+There is a very important semantic difference between the two languages,
+however: the scope/lifetime of the temporary object when this type of
+declaration occurs at block scope.  Because of the strict rules in C++ regarding
+construction and destruction of objects (which can have arbitrary side effects),
+the lifetime follows the same rules as any other type of temporary value, i.e.
+it extends only to the end of the full expression where the object is used.  In
+the previous examples, the objects are destroyed and inaccessible after the
+semicolons following the expressions that declare them.
+
+In C, the temporary object is assigned a duration according to its enclosing
+scope.  A declaration at file scope assigns it static storage duration.  This is
+virtually the same as when aggregate initialization is used in the definition of
+an object with static storage duration in C++.  However, for declarations at
+block scope, C assigns automatic storage duration just as if the object had been
+defined as a local variable prior to the expression where it is used: its scope
+spans the entire block where it is declared.  This makes code like the following
+possible, where a temporary array is created as part of an expression and used
+throughout the surrounding block:
+
+\begin{lstlisting}[style=c]
+#define FMT(buffer, fmt, ...) fmt_str((buffer), (fmt), __VA_ARGS__)
+
+inline static char *fmt_str(
+    char *restrict buffer, const char *restrict fmt, ...
+) {
+    va_list args;
+    va_start(args, fmt);
+    vsprintf(buffer, fmt, args);
+    va_end(args);
+    return buffer;
+}
+
+int main(void) {
+    char *const s = FMT((char[128]){0}, "%s %d %f", "str", 42, 3.1415);
+    puts(s);
+}
+\end{lstlisting}
+
+An attempt to use the similar C++ syntax would not work as expected, as the
+lifetime of the object ends as soon as the assignment is concluded:
+
+\begin{lstlisting}[style=c++]
+int main(void) {
+    char *s = FMT(std::array<char, 128>{}, "%s %d %f", "str", 42, 3.1415);
+    // temporary array (and `s`, by extension) no longer valid here
+    std::puts(s);
+}
+\end{lstlisting}

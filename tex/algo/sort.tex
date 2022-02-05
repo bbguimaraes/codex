@@ -3,6 +3,87 @@
 \subsection{Ordering}
 \label{subsec:algo:ordering}
 
+\begin{description}
+    \item[Partial order]
+        is an ordering relation which cannot be used to order all elements of a
+        set.
+    \item[Weak partial order]
+        is a partial ordering relation which is reflexive, i.e. for relation
+        $R$, $\forall x \in X, x R x$.  The \textit{less-than-or-equal} relation
+        ($\leq$) is weak since $x \leq x$.
+    \item[Strong partial order]
+        is a partial ordering relation which is irreflexive, i.e. for relation
+        $R$, $\forall x \in X, \neg(x R x)$.  The \textit{less-than} relation
+        ($<$) is strong since $\neg(x < x)$.
+    \item[Total order]
+        is an ordering relation where every element can be classified as
+        preceding or succeeding every other element.
+\end{description}
+
+\begin{aside}
+    Examples of weak partial orders that occur commonly in programming are:
+    \begin{itemize}
+        \item
+            The edges of a directed acyclic graph.  Ancestors in unrelated
+            hierarchies have no relation to each other.
+        \item
+            The \textit{happens-before} relation in memory ordering operations
+            (v.  \secrefpar{sec:conc:atomic}).  Two operations that happen
+            before a third are unsequenced with respect to each other.
+    \end{itemize}
+\end{aside}
+
+Note that (several) total orders can always be established for finite partial
+orders:
+
+\begin{itemize}
+    \item
+        A particular topological order of a directed acyclic graph establishes a
+        total order from the partial order described by its edges.
+    \item
+        A particular sequence of operations under sequential consistency
+        establishes a total order from the partial order of memory ordering
+        operations.
+\end{itemize}
+
+\subsection{Equivalence}
+
+In mathematics and computer science, two concepts are involved in determining
+the fundamental relation between values of a given type: \textit{equivalence}
+and \textit{equality}.  Equivalence (often represented as $\sim$ or $\equiv$) is
+described mathematically as a binary relation that is:
+
+\begin{description}
+    \item[Reflexive] $x \sim x$
+    \item[Symmetric] $x \sim y \implies y \sim x$
+    \item[Transitive] $(x \sim y) \land (y \sim z) \implies x \sim z$
+\end{description}
+
+Any relation which satisfies these properties is an \textit{equivalence
+relation}.  Equality is the canonical equivalence relation: $x$ and $y$ are
+\textit{equal} iff they have the same value.  Equivalence relations are
+interesting in both mathematics and computer science because they still apply to
+types which may not have a strict equality relation: it is a more general
+relation.
+
+In practical terms, specifically in the context of sorting and searching
+algorithms, a \textit{strict partial order} (i.e. irreflexive) is sufficient for
+their implementation.  This allows these algorithms to be applied to types which
+do not have a concept of equality and simplifies their interface, since a single
+relation can be used for all operations instead of two.  For example, the
+\texttt{std::sort} and \texttt{std::binary\_search} algorithms (to list a few)
+in the C++ standard library define their semantics in terms of an equivalence
+relation, for which \texttt{std::less} --- a generic version of the \texttt{<}
+operator --- is the canonical implementation, establishing the following
+definitions:
+
+\begin{description}
+    \item[Equality]
+        \texttt{x == y}, as dictated by \texttt{operator==}
+    \item[Equivalence]
+        \texttt{!(x < y) \&\& !(y < x)}, as dictated by \texttt{operator<}
+\end{description}
+
 \subsection{Selection sort}
 
 \begin{figure}[p]

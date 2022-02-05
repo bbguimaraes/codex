@@ -28,6 +28,8 @@ LISTINGS := \
 	cpp/mult_inh \
 	cpp/mult_inh.o \
 	cpp/mult_opt.o \
+	sol/chess0 \
+	sol/chess1 \
 	struct/alloc/dedicated.o \
 	struct/alloc/embedded.o \
 	struct/alloc/header.o \

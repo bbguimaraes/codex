@@ -1,3 +1,98 @@
+\paragraph{\ref{ch:arch}.\ref{ex:arch:chess}}
+
+\begin{figure}[ht]
+    \centering
+    \begin{lstlisting}[
+        basicstyle=\large\ttfamily,
+        xleftmargin=5em,
+    ]
+     A   B   C   D   E   F   G   H
+   +-------------------------------+
+ 8 | r |:n:| b |:q:| k |:b:| n |:r:|
+   |---+---+---+---+---+---+---+---|
+ 7 |:p:| p |:p:| p |:p:| p |:p:| p |
+   |---+---+---+---+---+---+---+---|
+ 6 |   |:::|   |:::|   |:::|   |:::|
+   |---+---+---+---+---+---+---+---|
+ 5 |:::|   |:::|   |:::|   |:::|   |
+   |---+---+---+---+---+---+---+---|
+ 4 |   |:::|   |:::|   |:::|   |:::|
+   |---+---+---+---+---+---+---+---|
+ 3 |:::|   |:::|   |:::|   |:::|   |
+   |---+---+---+---+---+---+---+---|
+ 2 | P |:P:| P |:P:| P |:P:| P |:P:|
+   |---+---+---+---+---+---+---+---|
+ 1 |:R:| N |:B:| Q |:K:| B |:N:| R |
+   +-------------------------------+
+ 0. 8 pawns   (p)   3. 2 bishops (b)
+ 1. 2 rooks   (r)   4. 1 queen   (q)
+ 2. 2 knights (n)   5. 1 king    (k)
+    \end{lstlisting}
+    \caption{Chess board}
+    \label{fig:sol:chess}
+\end{figure}
+
+A chess board consists of an 8x8 grid with two identical sets, except for the
+color, of sixteen pieces each.  Usually the colors of sets are white and black.
+In addition, every piece of the same type and color is interchangeable: all
+white pawns are equal, etc.  Figure \ref{fig:sol:chess} shows a representation
+of the initial disposition of the pieces on the board using standard chess
+notation, with the pieces represented each by one character as described in the
+text below it.  White pieces are shown in capital letters and black positions on
+the board have the shading character sequence \texttt{:::}.
+
+An initial design for the storage is as a one- or two-dimensional array of total
+size 64, with each element corresponding to one position in a predefined order
+(e.g. row-major in board order).  Any given position can be empty or contain one
+of the six types of pieces of one of the two colors.  The empty position and the
+six piece types fit into three bits with one unused value, a fourth bit can hold
+the color.  All the information for a position is encoded in 4 bits (half a
+byte).  Thus, the total space required for this representation is:
+\begin{align*}
+    8 \times 8 \times 4 = 256\text{ bits} = 32\text{ bytes}
+\end{align*}
+
+Listing \ref{lst:sol:chess0} shows this implementation.  However, storing
+information for empty positions is wasteful, specially as the game progresses
+and the board becomes more sparse.  Even so, storing only the position data
+along with an index does not reduce the storage requirement.  Storing the piece
+and color still takes four bits (now with a second unused value), and six bits
+are required for an index into the array ($\log_2 64 = 6$), yielding a total for
+the initial board with all pieces for maximally packed (but now unaligned) data
+of:
+\begin{align*}
+    32 \times 10 = 320\text{ bits} = 40\text{ bytes}
+\end{align*}
+
+A bitmap can be used to store the presence or absence of a piece at a given
+position.  The 64 positions fit an 8-byte (64-bit) integer.  The same 4-bit
+piece data as before can follow the bitmap in order for each non-empty position,
+yielding a total for the initial configuration of the board of:
+\begin{align*}
+    64 + 4 \times 32 = 192\text{ bits} = 24\text{ bytes}
+\end{align*}
+
+Listing \ref{lst:sol:chess1} shows this implementation.  All omitted
+declarations and definitions remain the same, except for the enumeration, which
+now no longer has an \texttt{EMPTY} element.
+
+\begin{figure}[p]
+    \lstinputlisting[
+        caption={Chess board storage},
+        label={lst:sol:chess0},
+        style=c,
+        firstline=9,
+        lastline=30,
+    ]{sol/chess0.c}
+    \lstinputlisting[
+        caption={Chess board storage with bit set},
+        label={lst:sol:chess1},
+        style=c,
+        firstline=37,
+        lastline=52,
+    ]{sol/chess1.c}
+\end{figure}
+
 \paragraph{\ref{ch:algo}.\ref{ex:algo:bsearch_middle}}
 
 The expression \texttt{m = b + (e - b) / 2} is a bit unusual but a

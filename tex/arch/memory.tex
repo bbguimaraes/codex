@@ -3,3 +3,123 @@
 \subsection{Cache}
 
 \label{subsec:arch:cache}
+
+Memory caches are a consequence of the frequency discrepancy between CPU and
+memory units.  Initially, these operated at comparable speeds, but as a
+consequence of Moore's law processor speeds increased dramatically, greatly
+surpassing the improvements in memory units.  A secondary effect was that CPU
+frequencies increased such that the distance between these components became a
+limiting factor.  Even imagining a scenario where transmission occurred at the
+speed of light and in a vacuum --- an already unrealistic scenario --- the
+transmission time for a signal between two components at a $1cm$ distance would
+be:
+
+\begin{align*}
+    c &\approx 3 \times 10^8m/s \\
+    F &= \frac{1cm}{c}
+       \approx \frac{10^{-2}m}{3 \times 10^8m/s}
+       \approx 3 \times 10^{10}Hz \\
+\end{align*}
+
+That is, even in ideal conditions a $1cm$ distance limits communication to the
+low gigahertz (GHz) range, which is close to the frequency common in modern
+processors.  These two factors combined result in CPUs which are orders of
+magnitude (usually two or more) faster than the circuits that connect them to
+each other and memory systems.  To avoid these long interruptions in execution
+whenever a memory access occurs, modern processors have multiple levels of
+\textit{cache}.
+
+Two main characteristics distinguish memory caches from main memory: their type
+and their size.  System memory is almost exclusively \textit{dynamic RAM}
+(DRAM), making large storage arrays cheap and compact, but slow.  Caches, on the
+other hand, operate on smaller sets of data at a time, so have lower storage
+requirements.  They are usually built with \textit{static RAM} (SRAM), which are
+much more complex, but much faster.  Their reduced size (even with the extra
+components compared to DRAM) also allows them to be placed closer to the CPUs,
+reducing transmission times.  CPUs typically have multiple levels of cache
+(\texttt{L1}, \texttt{L2}, etc.), each larger but further, increasing both
+storage capacity and access times.  Higher levels can also be shared between two
+or more processors.  Common access times for the L1 and L2 caches are around one
+and ten cycles, respectively.
+
+In addition, it is common for two separate types of cache to be used:
+\textit{instruction} and \textit{data} caches (sometimes called \textit{icache}
+and \textit{dcache}).  Program text and data have distinct access patterns and
+often reside in different regions of memory, so this separation can result in
+better cache utilization.  The instruction cache can be used to store decoded
+instructions, speeding up the execution, since instruction decoding is
+relatively slow, and reducing latency, especially in case of a pipeline stall.
+
+Cache systems with multiple layers can be either \textit{inclusive} or
+\textit{exclusive}, depending on whether data present in lower (i.e. smaller)
+layers are also present in upper layers.  Inclusive caches propagate data across
+all layers, which exclusive caches can have data stored only in some layers.
+Evictions in inclusive caches are faster, since data can simply be flushed to
+the next layer.  Conversely, loading data is faster in exclusive caches, since
+only a single layer is affected.
+
+\subsubsection{Lines}
+
+Internally, caches operate on fixed-length blocks called \textit{cache lines}.
+The length varies by architecture, but is almost always a power of 2 to
+facilitate operations (16 to 256 byte cache lines are common, 64 being the most
+common).  Whenever there is an access to a memory location, the address is
+analyzed and matched to the entries in the cache.  The first access will not
+find the line in the cache (a cache \textit{miss}), resulting in a stall as the
+line is transferred from main memory (or upper layers of cache).  Subsequent
+accesses will use the contents of the line in the cache (a \textit{hit}), as
+long as it is not evicted.
+
+The mapping of memory addresses to positions in the cache is determined by the
+cache \textit{associativity}.  The memory address is partitioned into different
+pieces depending on the various sizes of the components involved.  On a Linux
+machine, these sizes can be determined via \texttt{sysfs}:
+
+\begin{lstlisting}
+$ d=/sys/devices/system/cpu/cpu0/cache/index0
+$ cat $d/coherency_line_size
+64
+$ cat $d/size
+32K
+\end{lstlisting}
+
+In a \textit{fully-associative} cache, each memory address can occupy any
+position in the cache.  This allows maximum utilization and hit rate, but it
+also means a full search through the cache has to be performed to find a given
+line.  These searches are often done by a circuit that tests all values in
+parallel, so complexity and power consumption make this arrangement only
+practical for very small caches.
+
+In contrast, in a \textit{direct-mapped} cache, each memory address has a single
+corresponding position in the cache.  In the example above, the 32KB cache can
+hold 512 64-byte cache lines ($32\text{KB} / 64 = 2^{15} / 2^6 = 2^9 = 512$).
+For a given memory address, the lower 6 bits ($2^6 = 64$) are an offset into the
+cache line and are not used in the cache translation.  The next 9 bits ($2^9 =
+512$) indicate the position of the line in the cache, called the cache
+\textit{set}.  The remaining bits (17 or 49 for 32- and 64-bit addresses) are
+the \textit{tag} used to identify to which memory address a given line in the
+cache corresponds.  A direct-mapped cache is analogous to a hash table with no
+conflict resolution: if the same ``hash'' position (i.e. set) is already
+occupied, it is simply evicted and replaced with the new one.
+
+A \textit{set-associative} is a compromise between the simplicity of a
+direct-mapped cache and the benefits of a fully-associative cache.  Each set
+contains multiple cache lines: after the set is determined for a given address,
+it can be placed in any of the lines in the set.  It is analogous to a hash
+table with fixed-size buckets and no external chaining.  A direct-mapped cache
+is a 1-way set-associative cache; a fully-associative cache with $n$ sets is an
+$n$-way set-associative cache.  The cache in the example above in reality is
+8-way associative, which means each set has space for eight lines and thus it
+has not 512, but 64 sets ($32\text{KB} / 64 / 8 = 2^{15} / 2^6 / 2^3 = 2^6 =
+64$).
+
+\begin{lstlisting}
+$ cat $d/ways_of_associativity
+8
+$ cat $d/number_of_sets
+64
+\end{lstlisting}
+
+The partitioning of the address follows the same rules as before, only now with
+the reduced number of sets: 6 bits for the line offset (unchanged), 6 bits for
+the set, and 20/52 bits for the tag.

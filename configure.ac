@@ -38,6 +38,7 @@ AC_CONFIG_FILES([
     event_dispatcher/Makefile
     lambda/Makefile
     list/Makefile
+    loop/Makefile
     math/Makefile
     packet_reader/Makefile
     popcount/Makefile

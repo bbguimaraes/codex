@@ -1,3 +1,105 @@
 \section{Cache coherence}
 
 \label{sec:conc:coherence}
+
+This section combines the material in sections \secref{subsec:arch:cache} and
+\secref{sec:conc:consistency} to describe the protocols used by CPUs to keep all
+memory caches synchronized.  Protocols used in modern CPUs are complex, but the
+basic \textit{MESI} protocol can be used to describe the most fundamental
+aspects.  It is named after its four states:
+
+\begin{description}
+    \item[Modified]
+        lines are present only in this CPU's cache and have had their value
+        changed.  These lines are owned by the CPU and it must either write it
+        back to main memory or transfer ownership to another cache at some
+        point.
+    \item[Exclusive]
+        lines are present only in this CPU's cache and contain the same value as
+        the one in memory, but the CPU plans to modify its value in the near
+        future (e.g. it is in the middle of a read-modify-write operation).
+        These lines are also owned by the CPU but can be discarded at any time.
+    \item[Shared]
+        lines are present in this CPU's cache and potentially in others, and
+        have not been modified.  If it needs to be modified, the other CPUs have
+        to be consulted.
+    \item[Invalid]
+        lines are not present in the cache and are immediate targets for
+        replacement by new lines added to the cache.
+\end{description}
+
+Each line in the cache has this two-bit state together with the address
+information and data.  CPUs transition lines between states when necessary to
+effect operations by exchanging messages with other CPUs.  Multicore processors
+are message-passing systems at their core.  In systems where all CPUs are
+interconnected, the messages are:
+
+\begin{description}
+    \item[Read] requests the contents of a memory address.
+    \item[Read Response]
+        contains the data requested by a \emph{read} message, supplied either by
+        the memory system or by a CPU which holds the line in the
+        \emph{modified} state.
+    \item[Invalidate] requests that a given address be removed from the caches.
+    \item[Invalidate Acknowledge] responds to an \emph{invalidate} message.
+    \item[Read Invalidate]
+        a combination of the \emph{read} and \emph{invalidate} messages.
+        Requires a \emph{read response} and a set of \emph{invalidate
+        acknowledge} responses.
+    \item[Writeback]
+        writes data from a \emph{modified} line to a memory address.
+\end{description}
+
+Lines can transition from one of the states to any of the other three, depending
+on the operations being performed by the CPUs:
+
+\begin{description}
+    \item[M $\to$ E]
+        a CPU issues a \emph{writeback} message to write the contents of a line
+        to memory while retaining ownership of it.
+    \item[E $\to$ M]
+        an already-owned line is modified, no messages are required.
+    \item[M $\to$ I]
+        a CPU receives a \emph{read invalidate} message for one of its
+        \emph{modified} lines.  It removes the line from its cache and sends
+        both a \emph{read response} message with the data and an
+        \emph{invalidate acknowledge} message.
+    \item[I $\to$ M]
+        a CPU issues a RMW operation on a line that is not in its cache.  It
+        sends a \emph{read invalidate} message and receives the data in a
+        \emph{read response} message, along with a set of \emph{invalidate
+        acknowledge} messages, at which point it can complete the transition.
+    \item[S $\to$ M]
+        a CPU issues a RMW operation on a line that is in its cache.  It sends
+        an \emph{invalidate} message and receives a set of \emph{invalidate
+        acknowledge} messages, at which point it can complete the transition.
+    \item[M $\to$ S]
+        a CPU receives a \emph{read} message for one of its \emph{modified}
+        lines.  It sends a \emph{read response} with the data and possibly
+        writes the line back to memory.
+    \item[E $\to$ S]
+        a CPU receives a \emph{read} message for one of its \emph{modified}
+        lines.  It sends a \emph{read response} with the data.
+    \item[S $\to$ E]
+        a CPU will soon modify a line that is in its cache.  It sends an
+        \emph{invalidate} message and receives a set of \emph{invalidate
+        acknowledge} messages, at which point it can complete the transition.
+    \item[E $\to$ I]
+        a CPU receives a \emph{read invalidate} message for one of its
+        \emph{exclusive} lines.  It removes the line from its cache and sends
+        both a \emph{read response} message with the data and an
+        \emph{invalidate acknowledge} message.
+    \item[I $\to$ E]
+        a CPU issues a store to a line not in its cache.  It sends a
+        \emph{read invalidate} message and receives the data in a \emph{read
+        response} message, along with a set of \emph{invalidate acknowledge}
+        messages, at which point it completes the store and transitions to
+        \emph{modified}.
+    \item[I $\to$ S]
+        a CPU loads a line not in its cache.  It sends a \emph{read} message and
+        receives a \emph{read response}.
+    \item[S $\to$ I]
+        a CPU receives an \emph{invalidate} message from another CPU doing a
+        store to a \emph{shared} line.  It responds with an \emph{invalidate
+        acknowledge}.
+\end{description}

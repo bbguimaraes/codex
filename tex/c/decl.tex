@@ -1,5 +1,49 @@
 \section{Declarations}
 
+Declarations in C are infamously considered complex and arcane, but follow a
+very simple rule: the syntax and precedence rules for the various elements that
+constitute it are the same as those used in expressions involving the declared
+variable (\cite{Ritchie1996}).  Thus the following:
+
+\begin{lstlisting}[style=c]
+int i, *p, **p;
+\end{lstlisting}
+
+declare variables of type integer, pointer-to-integer, and
+pointer-to-pointer-to-integer, which are used in expressions in a similar way:
+
+\begin{lstlisting}[style=c]
+int x = i, y = *p, z = **p;
+\end{lstlisting}
+
+Similarly, the following:
+
+\begin{lstlisting}[style=c]
+int fi(), *fp(), (*pfi)(), *(*pfp)();
+\end{lstlisting}
+
+declare a function returning an integer, a function returning a
+pointer to integer, a pointer to function returning an integer, and a pointer to
+function returning a pointer to integer, which are used as:
+
+\begin{lstlisting}[style=c]
+int j = fi(), k = *fp(), l = (*pfi)(), m = *(*pfp)();
+\end{lstlisting}
+
+Similarly for arrays, the following:
+
+\begin{lstlisting}[style=c]
+int ai[10], *ap[10], (*pai)[10], *(*pap)[10];
+\end{lstlisting}
+
+declare variables of type array of 10 integers, array of ten integer pointers,
+pointer to array of ten integers, and pointer to array of ten integer pointers,
+which are used as:
+
+\begin{lstlisting}[style=c]
+int x = ai[0], y = *ap[0], z = (*pai)[0], w = *(*pap)[0];
+\end{lstlisting}
+
 \subsection{Storage}
 
 \label{subsec:c:storage}

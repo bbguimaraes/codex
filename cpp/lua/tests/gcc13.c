@@ -1,0 +1,2 @@
+#define EPERM EPERM
+EPERM

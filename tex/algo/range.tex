@@ -1,0 +1,44 @@
+\begin{subfigure}[h]{0.45\textwidth}
+    \centering
+    \begin{tikzpicture}[
+        >={Stealth[round]},
+        minimum width = 2em,
+        minimum height = 2em,
+    ]
+        \matrix {
+            \node (n0) [rectangle, draw] {}; &
+            \node (n1) [rectangle, draw, fill = black!20] {}; &
+            \node (n2) [rectangle, draw, fill = black!20] {}; &
+            \node (n3) [rectangle, draw] {}; \\
+        };
+        \node at ($ (n0.south) - (0, 0.25) $) {0};
+        \node at ($ (n1.south) - (0, 0.25) $) {1};
+        \node at ($ (n2.south) - (0, 0.25) $) {2};
+        \node at ($ (n3.south) - (0, 0.25) $) {3};
+    \end{tikzpicture}
+    \caption{Elements indicated by position}
+    \label{fig:algo:range0}
+\end{subfigure}
+\quad
+\begin{subfigure}[h]{0.45\textwidth}
+    \centering
+    \begin{tikzpicture}[
+        >={Stealth[round]},
+        minimum width = 2em,
+        minimum height = 2em,
+    ]
+        \matrix {
+            \node (n0) [rectangle, draw] {}; &
+            \node (n1) [rectangle, draw, fill = black!20] {}; &
+            \node (n2) [rectangle, draw, fill = black!20] {}; &
+            \node (n3) [rectangle, draw] {}; \\
+        };
+        \node at ($ (n0.south west) - (0, 0.25) $) {0};
+        \node at ($ (n1.south west) - (0, 0.25) $) {1};
+        \node at ($ (n2.south west) - (0, 0.25) $) {2};
+        \node at ($ (n3.south west) - (0, 0.25) $) {3};
+        \node at ($ (n3.south east) - (0, 0.25) $) {4};
+    \end{tikzpicture}
+    \caption{Indices between elements}
+    \label{fig:algo:range1}
+\end{subfigure}

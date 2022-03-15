@@ -3,6 +3,167 @@
 \subsection{Intervals and ranges}
 \label{subsec:algo:ranges}
 
+Both in mathematics and computer science, \textit{ranges} (or
+\textit{intervals}) of elements are an important concept.  The interval
+corresponding to a sequence of integers such as the set $\{1, 2, 3, 4\}$ can be
+represented using a few different notations:
+
+\begin{enumerate}
+    \item[0.]
+        $[1, 4]$, or $\{x | 1 \leq x \leq 4\}$, the integers from $1$ to $4$,
+        both inclusive
+    \item
+        $[1, 5)$, or $\{x | 1 \leq x < 5\}$, the integers from $1$ (inclusive)
+        to $5$ (exclusive)
+    \item
+        $(0, 4]$, or $\{x | 0 < x \leq 4\}$, the integers from $0$ (exclusive)
+        to $4$ (inclusive)
+    \item
+        $(0, 5)$, or $\{x | 0 < x < 5\}$, the integers from $0$ to $5$, both
+        exclusive
+\end{enumerate}
+
+These intervals can be classified into the following categories:
+
+\begin{description}
+    \item[Closed intervals]
+        have determinate endpoints (notation 0, whose endpoints are 1 and 4).
+    \item[Open intervals]
+        have no determinate endpoints, only bounds which can be infinitely
+        approached (notation 3, if applied to the set of real numbers,
+        $\mathbb{R}$).
+    \item[Half-open intervals]
+        have both open and closed endpoints (notations 1 and 2).
+    \item[Left-closed intervals] have a minimum element (notations 0 and 1).
+    \item[Left-open intervals] do not (notations 2 and 3).
+    \item[Right-closed intervals] have a maximum element (notations 0 and 2).
+    \item[Right-open intervals] do not (notations 1 and 3).
+\end{description}
+
+All of the notation examples above are different ways of representing the same
+set of integers.  One of them, however, is generally preferred to denote ranges
+in computer programs.  The fundamental reason for this is the same that
+underlies the usage of zero-based indices in most programming
+languages\footnotemark.
+
+\footnotetext{
+    Lua being a notable exception where the choice was made deliberately to make
+    the language more approachable to non-technical users (the intended primary
+    audience), ensuring an eternal stream of bugs caused by programmers
+    switching between it and other languages.}
+
+\cite{Dijkstra1982} presents several justifications.  The set of natural
+numbers, $\mathbb{N}$\footnotemark, has a minimum element (regardless of whether
+it is assumed to include the number zero or not).  Left-open notations need to
+include an element outside of the set to describe it.  Similarly, right-closed
+notations need to include an element outside of the set to describe an empty
+interval when the left endpoint is the minimum natural element (since, for
+example, $[0, 0]$ is the unit set $\{0\}$).  This makes the half-open,
+left-closed notation the preferred one for specifying ranges of values.  Beyond
+these characteristics, it has several other notational advantages (some of which
+are also true for the other notations in certain cases):
+
+\footnotetext{
+    Or, alternatively --- and anticipating the conclusion, for programmers: an
+    \texttt{unsigned} integer type.}
+
+\begin{itemize}
+    \item the length of the interval $[x,y)$ is exactly $y - x$
+        \begin{itemize}
+            \item $[x,x)$ is an empty interval
+            \item an interval of length $N$ can be represented as $[0,N)$
+            \item
+                an interval of length $N$ starting at $x$ can be represented
+                as $[x,x+N)$
+            \item $x \bmod N \in [0,N)$
+        \end{itemize}
+    \item two intervals $[x,y)$ and $[z,w)$ are adjacent if $y = z$ or $w = x$
+        \begin{itemize}
+            \item the concatenation of intervals $[x,y)$ and $[y,z)$ is $[x,z)$
+            \item
+                an interval $[0,N)$ split at the $n$-th element results in the
+                intervals $[0,n)$ and $[n,N)$
+            \item
+                an interval $[x,y)$ split at the $n$-th element results in the
+                intervals $[x,x+n)$ and $[x+n,y)$
+            \item
+                an interval $[x,y)$ which can be divided evenly into
+                sub-intervals of size $n$ is the concatenation of the intervals
+                $[x, x + n), [x + n, x + 2n), [x + 2n, x + 3n), \ldots$
+        \end{itemize}
+\end{itemize}
+
+When applied to ranges of values in a computer program (e.g. sequences of memory
+addresses), these properties eliminate most classes of the pernicious
+\textit{off-by-one} errors.  For example, the trivial splitting property makes
+partitioning a range (in the middle, say, for a binary search) much easier and
+less prone to errors:
+
+\begin{lstlisting}[style=c]
+// Recursively partition the range [b,e) in half.
+void f(int *b, int *e) {
+    if(b == e)
+        return;
+    int *m = b + (e - b) / 2;
+    use(m);
+    f(b, m), f(m + 1, e);
+}
+\end{lstlisting}
+
+Its other beneficial property results in a notation that may seem at first
+unusual.  Consider the depiction of the array in figure \ref{fig:algo:range0},
+and suppose we wish to represent the shaded interval, which consists of the
+elements at position 1 and 2.  Both $[1,2]$ and $[1,3)$ seem like equally valid
+options, i.e. it is not clear whether the end of the range is (or should be)
+inclusive or exclusive.  Enumerating the positions \emph{between} the elements,
+as in figure \ref{fig:algo:range1}, results in an unambiguous representation:
+the interval $[1,3)$ denotes the range between indices 1 and 3.
+
+\begin{figure}[ht]
+    \centering
+    \input{algo/range}
+\end{figure}
+
+Consider also how the end position in this type of half-open range mirrors the
+form of the traditional \texttt{for} loop in a language such as C for not only
+numbers and addresses, but any type in general:
+
+\begin{lstlisting}[style=c]
+for(int i = b; i < e; ++i)
+for(int *p = b; p < e; ++p)
+for(T x = b; x < e; ++x)
+\end{lstlisting}
+
+This is the basis of the rule in the C standard that allows a program to form
+(but not dereference) pointers to \textit{one past the last element} of an
+array, and it illustrates the rule more clearly.  More importantly for languages
+such as C++, it is also equivalent to and enables the more general form:
+
+\begin{lstlisting}[style=c]
+for(int i = 0; i != N; ++i)
+for(int *p = b; p != e; ++p)
+for(T x = b; x != e; ++x)
+\end{lstlisting}
+
+This transformation --- which could not happen if $[b,e)$ were a closed interval
+--- of \texttt{<} into \texttt{!=} may seem inconsequential, but is subtly
+profound.  This is because it no longer limits this construct to contiguous
+ranges\footnotemark: it can be applied to any range which supports a
+\textit{sentinel} value as the endpoint, such as a tree or linked list.  This is
+the foundation of iterators and ranges in C++, and the standard library
+algorithms built on top of them.
+
+\footnotetext{
+    V. the \texttt{concept}s in the \texttt{std::ranges} namespace of the C++
+    standard library, such as \texttt{forward\_range},
+    \texttt{random\_access\_range}, and \texttt{contiguous\_range}.}
+
+Even in less expressive languages, half-open ranges eliminate ambiguities.  An
+insertion at index \texttt{i} positions the value between the elements indicated
+by the index.  Inserting at position \texttt{0} means prepending, inserting at
+position \texttt{N} means appending.  Denoting sub-ranges, e.g. for deletion, is
+also trivial as shown above.
+
 \subsection{Utilities}
 
 Throughout this chapter, a number of utility functions will be used in the

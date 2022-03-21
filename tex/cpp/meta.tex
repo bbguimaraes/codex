@@ -297,3 +297,58 @@ to \ident{!std::is_void<T>}), the substitution succeeds and the
 template argument is fixed before partial specializations are analyzed, so this
 \texttt{void} has to match it).  If the substitution generates an invalid type
 (i.e. \texttt{void\&}), it fails and the specialization is discarded.
+
+\subsection{Fold expressions}
+
+\begin{lstlisting}[style=c++]
+template<typename T>
+struct last<types<T>> {
+    using type = T;
+};
+
+template<typename T, typename ...Ts>
+struct types_last<types<T, Ts...>> {
+    using type = last_t<types<Ts...>>
+};
+\end{lstlisting}
+
+\begin{lstlisting}[style=c++]
+template<typename ...Ts>
+struct last<types<Ts...>> {
+    using type = first_t<decltype((..., types<Ts>{}))>;
+};
+\end{lstlisting}
+
+\begin{lstlisting}[style=c++]
+template<typename T, typename R>
+using test = std::is_same_v<types_last<T>, R>;
+
+static_assert(test<types<int>, int>);
+static_assert(test<types<void, int>, int);
+static_assert(test<types<void, int&>, int&);
+static_assert(test<types<void, int&&>, int&&);
+static_assert(test<types<void, const volatile int&>, const volatile int&);
+\end{lstlisting}
+
+\begin{lstlisting}[style=c++]
+// generated with:
+// $ seq -f 'S<\%.0f>,' "$(((1 << 13) - 1))" -1 0
+template<int> struct S {};
+static_assert(
+    test<
+        types<
+            S<8191>,
+            S<8190>,
+            // ...
+            S<0>
+        >,
+        S<0>>);
+\end{lstlisting}
+
+GCC and Clang reject this version of the code with \texttt{S<1>} as the second
+argument in $\sim$0.25s and $\sim$0.3s, respectively\footnotemark, while using
+the recursive implementation takes $\sim$31s and $\sim$36s.
+
+\footnotetext{
+    Interestingly, GCC takes $\sim$0.7s to accept the original assertion.
+    Tested with GCC 11.1.0 and Clang 13.0.0.}

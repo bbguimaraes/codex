@@ -1,0 +1,177 @@
+\section{Hash tables}
+
+The data structures analyzed in section \secref{sec:struct:bin_tree} operate
+under the same principle: at each node, a comparison is performed and the search
+space is reduced by a constant factor (i.e. 2).  This naturally results in a
+total of $\log_2 n$ steps for the entire operation for an input of size $n$.
+
+It would seem that a branching factor of 2 is as optimal as can be achieved, but
+the constant-time random access of computer memory can be exploited for faster
+searches.  Starting with a very basic example, a map from a number in the range
+$[0, n)$ to some memory address could be implemented using a simple array:
+
+\begin{lstlisting}[style=c]
+int *search(int v[static n], int x) {
+    return v + x;
+}
+\end{lstlisting}
+
+Searches are now done in constant time.  However, this structure requires
+\texttt{n * sizeof(int)} bytes of storage.  One solution to this problem is to
+map the input number to a smaller set of values.  This is done via a
+\textit{hashing function}.  A very simple function for integers is to calculate
+the index \emph{modulo} some number $m < n$:
+
+\begin{lstlisting}[style=c]
+int *search(int v[static m], int x) {
+    return v + (x % m);
+}
+\end{lstlisting}
+
+This data structure uses only \texttt{m * sizeof(int)} bytes of storage.
+However, a hashing function is by definition not \textit{injective}: it does not
+map every input value to a unique output value.  This results in
+\textit{collisions}, when more than one input value map to the same array index,
+which must be resolved since only a single item can be stored in any given
+position.  Collision handling strategies are described by two complementary
+principles:
+
+\begin{description}
+    \item
+        [Open/closed hashing] describes whether traversal escapes the table to a
+        secondary type of storage (open) or is constrained to the table
+        (closed).
+    \item
+        [Open/closed addressing] describes whether the address in the table
+        where an element is stored is completely determined by the hash function
+        (closed) or varies depending on the current contents and size of the
+        table (open).
+\end{description}
+
+In abstract terms, both use some form of \textit{chaining}: colliding elements
+form a list, which is traversed until the desired element is found (or not).
+
+The simplest form of collision resolution with \textit{open addressing} on
+insertion is to move forward in the array until an empty position is found,
+moving back to the beginning at the end until all positions have been checked
+(in which case the array is full and cannot contain more elements).
+
+\begin{lstlisting}[style=c]
+int *insert(int v[static n], int x) {
+    int *const i0 = v + (x % n);
+    for(int *i = i0; i != v + n; ++i)
+        if(*i == x)
+            return i;
+    for(int *i = v; i != i0; ++i)
+        if(*i == x)
+            return i;
+    return NULL;
+}
+\end{lstlisting}
+
+\textit{Open hashing} does not store the elements directly in the array, but a
+pointer to some external structure containing all colliding elements for each
+position, called \textit{chains} or \textit{buckets}.  This structure can be as
+simple as another array or a linked list, but other more sophisticated options
+are also used.
+
+\begin{lstlisting}[style=c]
+struct node {
+    struct node *n;
+    int i;
+};
+
+int *search(struct node *v[static n], int x) {
+    for(struct node *p = v[x % n]; *p; p = p->n)
+        if(p->i == x)
+            return &p->i;
+    return NULL;
+}
+\end{lstlisting}
+
+For a hashing function which evenly distributes the $n$ input values into $m$
+indices, the length of each chain is roughly $n/m$.  Since $m$ is usually of the
+same order as $n$ --- i.e. $\Theta(n)$ --- or, more speecifically, at least of
+the same order as $n$ --- i.e. $\Omega(n)$ --- this means the length of each
+chain is $O(1)$.
+
+\begin{multicols}{2}
+    \begin{lstlisting}[style=c,xleftmargin=0px,xrightmargin=0px]
+struct entry { u32 /*h,*/ k, v; };
+
+struct hash_table {
+    struct entry v[N];
+};
+
+u32 *find(struct hash_table *t, u32 k) {
+    struct entry *p = t->v;
+    const struct entry *const e = p + N;
+    for(; p != e; ++p)
+        if(p->k == k)
+            return &p->v;
+    return NULL;
+}
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=c,xleftmargin=0px,xrightmargin=0px]
+u32 hash(u32);
+
+u32 *find(struct hash_table *t, u32 k) {
+    const struct entry *const b = t->v;
+    const struct entry *const e = b + N;
+    struct entry *b = t->v + hash(k);
+    for(; p != e; ++p)
+        if(p->k == k)
+            return &p->v;
+    for(p = t->v; p != b; ++p)
+        if(p->k == k)
+            return &p->v;
+    return NULL;
+}
+    \end{lstlisting}
+\end{multicols}
+
+\subsection{Hash functions}
+
+\url{https://preshing.com/20110504/hash-collision-probabilities}
+
+\begin{itemize}
+    \item \texttt{x \% N} / \texttt{x \& N}
+        \begin{itemize}
+            \item integers
+            \item random input
+        \end{itemize}
+    \item
+        \texttt{for(h = i; *p; *p++) h = h * m + *p;}
+        \begin{itemize}
+            \item byte strings
+            \begin{itemize}
+                \item K\&R 1st ed.: \texttt{i = 0}, \texttt{m = 1}
+                \item K\&R 2ed ed.: \texttt{i = 0}, \texttt{m = 31}
+                \item
+                    djb2: \texttt{i = 5381}, \texttt{m = 33}
+                    (\texttt{(h << 5) + h})
+            \end{itemize}
+        \end{itemize}
+\end{itemize}
+
+\subsection{Collisions}
+
+\begin{itemize}
+    \item
+        External bucket for each hash value: linked list, vector, red-black
+        tree.
+    \item Probing
+        \begin{itemize}
+            \item linear
+            \item quadratic
+            \item \url{https://preshing.com/20160314/leapfrog-probing}
+            \item \ldots
+            \item good cache locality
+            \item efficient for low and medium load factor
+        \end{itemize}
+\end{itemize}
+
+\url{https://preshing.com/20110603/hash-table-performance-tests}
+
+% TODO separate key/value arrays

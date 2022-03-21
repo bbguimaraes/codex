@@ -72,6 +72,23 @@ any point in time.  The code in the critical section is therefore effectively
 serialized.  A semaphore of this type is referred to as a \textit{binary
 semaphores} or \textit{mutex} (short for \textit{mutual exclusion}).
 
+An atomic boolean flag can be used to implement the simplest possible (binary
+spin-)lock (listing \ref{lst:conc:atomic_lock}).
+
+\begin{lstlisting}[
+    style=c++,
+    label=lst:conc:atomic_lock,
+    caption={Simple lock using atomic operations},
+]
+class mutex {
+    using enum std::memory_order;
+    std::atomic_flag f;
+public:
+    void lock(void) { while(this->f.test_and_set(acquire)); }
+    void unlock(void) { this->f.clear(release); }
+};
+\end{lstlisting}
+
 \subsection{R/W semaphore}
 
 Both the \textit{P}/\textit{V} operations on a semaphore treat the calling

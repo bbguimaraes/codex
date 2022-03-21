@@ -1,2 +1,462 @@
 \section{Undefined behavior}
 \label{sec:c:ub}
+
+The standard has precise definitions of the observable behavior of most
+operations which constitute a C program, but explicitly excludes some of them,
+categorized as:
+
+\begin{description}
+    \item[Undefined behavior]
+        completely invalidates a program.  The language assigns no meaning to
+        the operation and any program which includes it is not required to have
+        any meaningful behavior at all.
+    \item[Unspecified behavior]
+        can result in different outcomes in different platforms or even in
+        different usages within the same program.
+    \item[Implementation-defined behavior]
+        has the same semantics as unspecified behavior, but the implementation
+        must document what the outcomes are.
+    \item[Locale-specific behavior]
+        varies according to calls to the standard library function
+        \texttt{setlocale}.
+\end{description}
+
+The primary reason for the first three categories is to guarantee the efficiency
+and portability of C code across platforms which have different implementations
+of those operations, as discussed in detail in the following sections.  Defining
+their behavior would penalize those whose instructions do not natively support
+the chosen behavior and force compilers to emit extra code to compensate.
+
+\subsection{Integer arithmetic}
+
+As discussed in section \secref{sec:arch:int}, arithmetic involving unsigned
+numbers is simple, while different representations, with different advantages
+and disadvantages, can be used for signed numbers.  Two's complement with
+modular arithmetic is the de facto standard, used in most architectures and
+implementations\footnotemark, but other representations are still in use, and
+for a long period of time there was not a clear dominance.
+
+\footnotetext{
+    In fact, it is the only representation allowed by the C++20 standard,
+    planned to be adopted by the C23 standard as well.}
+
+Even among platforms with the same underlying integer representation, the
+behavior of operations can differ.  As an example, the semantics of integer
+\textit{overflow} and \textit{underflow} --- when the result of an operation
+cannot be represented by its corresponding type --- are among the most
+significant in the context of undefined operations.  The behavior of specific
+platforms varies independently of their integer representation, and include:
+
+\begin{itemize}
+    \item
+        The operation is computed with \textit{saturating arithmetic}, i.e.
+        results are bound within a predefined range.  Values which exceed the
+        range are adjusted to the minimum/maximum of the range.
+    \item
+        The operation is computed with \textit{modular arithmetic}, i.e.
+        results outside the range are replaced by their equivalent according to
+        the modulus of the type.  Condition code bits in the CPU's status
+        registers are usually set when this happens.
+    \item
+        The operation generates an \textit{interrupt}, either initiated by the
+        hardware or by software through the use of special compiler arguments
+        (e.g. \texttt{-ftrapv} in GCC/Clang).
+\end{itemize}
+
+For these reasons, low-level programming languages such as C, which operate
+close to the hardware platform, have strict rules for unsigned arithmetic, but
+leave room for implementations to define many aspects of signed arithmetic
+semantics.  These operations are classified as having either
+implementation-defined or undefined behavior.  Doing otherwise would require
+extra code in implementations whose native operations did not match those
+dictated by the standard\footnotemark.  Continuing with the overflow/underflow
+examples, the standard states that:
+
+\footnotetext{
+    Note that by imbuing unsigned types with both ``positive'' and ``modular''
+    semantics, the standard constrains somewhat the optimization advantages in
+    platforms whose native instructions do not perform modular arithmetic.  A
+    type system in which these concepts were orthogonal could allow the
+    generation of code that is closer to the machine capabilities in those
+    cases.}
+
+\begin{itemize}
+    \item \texttt{UINT\_MAX + 1} must be \texttt{0u}
+    \item \texttt{0u - 1} must be \texttt{UINT\_MAX}
+    \item
+        \texttt{INT\_MAX + 1} results in undefined behavior (not
+        \texttt{INT\_MIN})
+    \item
+        \texttt{INT\_MIN - 1} results in undefined behavior (not
+        \texttt{INT\_MAX})
+    \item
+        \texttt{CHAR\_MAX + 1} and \texttt{SHRT\_MAX + 1}, however, are
+        interesting cases which demonstrate the surprising complexity of the C
+        type system.  Because of integer promotion rules, the result is either:
+        \begin{itemize}
+            \item the expected value, but with type \texttt{int}, or
+            \item undefined due to overflow
+        \end{itemize}
+        depending on whether \texttt{INT\_MAX} is larger than \texttt{CHAR\_MAX}
+        and \texttt{SHORT\_MAX} (respectively) on a given platform --- i.e.
+        whether the \texttt{char} or \texttt{short} constant is promoted to
+        \texttt{int} prior to the addition.
+    \item
+        The unary minus (\texttt{-}) operator can cause overflow in two's
+        complement implementations (where the value zero takes one value out of
+        the positive range) if applied to the minimum value of a signed type.
+        The result is one greater than the maximum value, which is outside the
+        range of the type and equal to the minimum value in modular arithmetic.
+        This results in surprising equalities such as \texttt{-INT\_MIN ==
+        INT\_MIN}.
+\end{itemize}
+
+Bitwise shift operations are another example where not all expressions have
+defined behavior, again due to divergent hardware behavior.  Shifting signed
+values is restricted by the integer representation just as in the case of
+overflows.  In the case of left shifts, the resulting value has to be valid for
+its type, otherwise the behavior is undefined.  The behavior of right shifts, in
+contrast, is implementation-defined: it may perform regular logical shift or
+arithmetic shift (or something else entirely, possibly).  The specific case of
+shifting values --- even unsigned --- by an amount that is equal to or larger
+than the type's width in bits is another example of undefined behavior to
+accommodate different implementations:
+
+\begin{itemize}
+    \item 32-bit shifts on x86 are truncated to 5 bits, so
+        \begin{itemize}
+            \item
+                $\texttt{x <{}< 32} \; = \; \texttt{x <{}< 64} \; = \texttt{x
+                <{}< 0} \; = \; x$
+        \end{itemize}
+    \item
+        32-bit shifts on PowerPC are truncated to 6 bits, so:
+        \begin{itemize}
+            \item $\texttt{x <{}< 32} \; = \; \texttt{x <{}< 0} \; = \; x$, but
+            \item $\texttt{x <{}< 64} \; = \; 0$
+        \end{itemize}
+    \item
+        32-bit shifts on ARM are truncated to 8 bits, so
+        \begin{itemize}
+            \item $\texttt{x <{}< 32} \; = \; \texttt{x <{}< 64} \; = \; 0$
+        \end{itemize}
+\end{itemize}
+
+In all the cases presented in this section, ``well defined'' should not be
+confused with ``correct'' behavior.  It is entirely possible for code to use
+exclusively well-defined operations and still be incorrect.  One famous example
+(\cite{Dietz2012}) from GCC is shown in listing \ref{lst:c:gcc}.  As indicated
+by the comment, the function allocates a vector of \texttt{N} elements.
+\texttt{struct rtvec\_def}, however, uses the common over-allocation technique
+of declaring a trailing array of size \texttt{1} of (effectively)
+\texttt{rtunion}s, so that \texttt{sizeof(struct rtvec\_def)} already includes
+one element.  The \texttt{n - 1} expression then calculates the correct number
+of extra elements which need to be allocated.  This works as expected except
+when \texttt{n == 0}, in which case the ultimate behavior is very surprising, if
+well-defined:
+
+\begin{enumerate}
+    \item \texttt{n - 1} results in \texttt{-1}, a signed integer value.
+    \item
+        \texttt{sizeof} expressions have the type \texttt{size\_t}, however, so
+        the result is converted prior to the multiplication to
+        \texttt{(size\_t)-1} (i.e.  \texttt{SIZE\_MAX}, a very large number) due
+        to the rules of integer promotion in arithmetic expressions.
+    \item
+        The result of the multiplication exceeds the range of the type, but that
+        is valid since it is \texttt{size\_t}.  The result under modular
+        arithmetic is \texttt{SIZE\_MAX - sizeof(rtunion) - 1}.
+    \item
+        The result of the addition again exceeds the range of the type.  The
+        final value of the expression is \texttt{sizeof(struct rtvec\_def) -
+        sizeof(rtunion)}.
+\end{enumerate}
+
+\begin{figure}[ht]
+    \begin{lstlisting}[
+        style=c,
+        label={lst:c:gcc},
+        caption={Wraparound in an allocation function in GCC},
+    ]
+/* Allocate a zeroed rtx vector of N elements */
+rtvec rtvec_alloc(int n) {
+    rtvec rt;
+    int i;
+    rt = (rtvec)obstack_alloc(
+        rtl_obstack,
+        sizeof(struct rtvec_def) + ((n - 1) * sizeof(rtunion)));
+    // ...
+    return rt ;
+}
+    \end{lstlisting}
+\end{figure}
+
+Even though there is no undefined or even implementation-defined behavior
+involved in any of the sub-expressions, the ultimate result is in no way what
+was expected by the programmer: an allocation of insufficient size for a
+\texttt{struct rtvec\_def}\footnotemark.
+
+\footnotetext{
+    Although do note that modular arithmetic guaranteed that the semantic intent
+    of the complete expression (allocate a \texttt{struct rtvec\_def} with
+    \texttt{n} --- i.e. zero --- elements) was maintained even in the presence
+    of multiple out-of-range values.  The outcome of an invalid C object is
+    unfortunate but independent of the mathematical interpretation of the
+    expression.}
+
+\subsection{Pointer arithmetic}
+
+Arithmetic involving at least one pointer value is only defined if the pointers
+involved are themselves valid.  A pointer can only be formed to existing objects
+and arrays, or to one element past the end of an array.  Operations are
+similarly only defined if pointer operands and results point to valid
+sub-elements of a common structural type (arrays, \texttt{struct}s,
+\texttt{union}s).  This rule implicitly --- in most cases --- invalidates
+overflow/underflow when integer operands are involved and pointers are
+implemented as memory indices, since it implies the resulting pointer is not
+part of the original object.  Subtraction with two pointer operands not only
+requires valid values under the same rules, but is also only defined if the
+resulting offset fits its type: \texttt{ptrdiff\_t}, a signed integer type with
+range $[\texttt{PTRDIFF\_MIN,PTRDIFF\_MAX}]$.
+
+\subsection{Optimizations}
+
+While some of the portability concerns described so far in this section have
+diminished due to the increasing adoption of common representations, undefined
+behavior is still very relevant in a different but related area: compiler
+optimization.  In this context, an equally valid conception of undefined
+behavior is as a \textit{restricted} or \textit{narrow contract}
+(\cite{Carruth2016}) offered by the programming language.  The reduced set of
+guarantees for signed integers, for example, compared to their unsigned
+counterparts gives the compiler more freedom to transform the operations
+involving them in a way that facilitates other optimizations.  Examples of the
+types of optimizations allowed by undefined behavior in C are \footnotemark:
+
+\footnotetext{
+    While some may seem nonsensical, they may be the result of the expansion of
+    inline functions and macros and never appear directly in source code.  The
+    simplified expressions can also in turn enable further optimization.}
+
+\begin{itemize}
+    \item Expression simplification
+        \begin{itemize}
+            \item
+                \texttt{x * 2 / 2} can be replaced with \texttt{x} if the
+                multiplication is assumed to not overflow.
+        \end{itemize}
+    \item Loop simplification
+        \begin{itemize}
+            \item
+                \texttt{for(int i = 0; i <= N; ++i)} can be assumed to always
+                execute exactly \texttt{N + 1} times (\texttt{N == INT\_MAX}
+                would result in an infinite loop).
+            \item
+                \texttt{for(int i = b; i <= e; i += n)} can be assumed to always
+                terminate (\texttt{INT\_MAX - n < e} would result in an infinite
+                loop for some values of \texttt{n} and \texttt{INT\_MAX}).
+        \end{itemize}
+    \item 32- to 64-bit integer promotion
+        \begin{itemize}
+            \item
+                In 64-bit code which mixes 32- and 64-bit values, 32-bit signed
+                integers can be assumed to not overflow (and require modular
+                arithmetic), ``promoted'' to 64-bit, and used in expressions
+                with other 64-bit values\footnotemark.
+        \end{itemize}
+        \footnotetext{
+            A tangential topic is the curious decision of 64-bit platforms to
+            maintain \texttt{int} as a 32-bit type, instead of continuing the
+            progression and making its width equal the register size of the
+            platform.  It is often assumed (and, also often, in a depreciative
+            manner) that this happened simply because of backward compatibility,
+            but that is just one of the factors that influenced that decision
+            (\cite{SUS1997}).  In summary:
+            \begin{itemize}
+                \item
+                    The $2^{32}$ range of 32-bit integers was already enough for
+                    most applications.  Expanding it was much less advantageous
+                    compared to, for example, the previous expansion from 16
+                    bits ($2^{16} = 65536$).
+                \item
+                    The integer categories in C would not be enough to express
+                    all desirable widths in common platforms (this predated the
+                    C99 fixed width types).  With an 8-bit \texttt{char} and a
+                    64-bit \texttt{int}, the only intermediate type,
+                    \texttt{short}, would have to be either 16- or 32-bit, and
+                    there would be no type left for the other size.
+                \item
+                    Integer promotion rules would convert values with a rank
+                    less than \texttt{int} to 64-bit in all arithmetic
+                    expressions.
+            \end{itemize}
+        }
+    \item Strict aliasing
+        \begin{itemize}
+            \item
+                Pointers of different types are treated as if they were
+                \texttt{restrict} with respect to each other (except for
+                \texttt{char} pointers, which can alias any other pointer).
+        \end{itemize}
+\end{itemize}
+
+Another example from \cite{Carruth2016} which demonstrates one of these
+optimizations is code adapted from the \texttt{bzip} compression program
+(listing \ref{lst:c:bzip}).  The purpose of the code (comparing blocks of bytes
+when sorting) is not as relevant as how it operates, the types it uses, and the
+machine code that is generated\footnotemark.  A block of bytes is supplied to
+the function along with a pair of indices.  The first part of the function,
+shown in the list, compares subsequent elements pointed to by the given indices,
+incrementing each by one position after each comparison.
+
+\footnotetext{
+    Generated with Clang 13.0.1 and \texttt{-O2}.  Interestingly, GCC does not
+    perform this optimization.}
+
+\begin{figure}[ht]
+    \begin{lstlisting}[
+        style=c,
+        label={lst:c:bzip},
+        caption={\texttt{bzip}'s \texttt{mainGtU}},
+    ]
+bool mainGtU(char *p, unsigned i0, unsigned i1) {
+    char c0, c1;
+    if((c0 = p[i0++]) != (c1 = p[i1++])) return c0 > c1;
+    if((c0 = p[i0++]) != (c1 = p[i1++])) return c0 > c1;
+    // ...
+}
+    \end{lstlisting}
+\end{figure}
+
+On the x86-64 architecture, the block pointer and the indices are, respectively,
+64- and 32-bit values.  Indexing the block involves offsetting the pointer by
+the value of the indices, a simple addition operation (a scaling operation would
+also be involved if \texttt{sizeof(*p)} was not \texttt{1}).  There exists an
+addressing mode dedicated to such situations, but examining the (abbreviated)
+generated machine code reveals it is not used in this case:
+
+\begin{lstlisting}[style=x86]
+    # ...
+    mov cl, byte ptr [rdi + rcx]
+    cmp byte ptr [rdi + rax], cl
+    jne .LBB0_4
+    lea eax, [rdx + 1]
+    lea ecx, [rsi + 1]
+    mov al, byte ptr [rdi + rax]
+    cmp byte ptr [rdi + rcx], al
+    jne .LBB0_4
+    lea eax, [rdx + 2]
+    lea ecx, [rsi + 2]
+    mov al, byte ptr [rdi + rax]
+    cmp byte ptr [rdi + rcx], al
+    jne .LBB0_4
+    # ...
+\end{lstlisting}
+
+The indices, initially in the \texttt{rdx} and \texttt{rsi} registers, are
+instead incremented using the \texttt{lea} instruction and then stored in the
+(32-bit portions of the) \texttt{eax} and \texttt{ecx} registers.  The expected
+machine code in this case would be the following, which can be generated by
+simply changing the indices from unsigned to signed variables of the same size
+(i.e. \texttt{int}):
+
+\begin{lstlisting}[style=x86]
+    # ...
+    mov dl, byte ptr [rdi + rcx]
+    cmp byte ptr [rdi + rax], dl
+    jne .LBB0_4
+    mov dl, byte ptr [rcx + rdi + 1]
+    cmp byte ptr [rax + rdi + 1], dl
+    jne .LBB0_4
+    mov dl, byte ptr [rcx + rdi + 2]
+    cmp byte ptr [rax + rdi + 2], dl
+    jne .LBB0_4
+    # ...
+\end{lstlisting}
+
+Here, the values remain in their original registers and used in the
+pointer/offset/immediate-value x86 addressing mode directly.  The reason for
+this difference is the restricted contract of signed integers: because the
+compiler has the guarantee that the signed indices will not overflow, it can
+treat them effectively as 64-bit values.  The same is not possible with unsigned
+indices since they must obey the $2^{32}$ modulo arithmetic in case of overflow.
+Using the (64-bit) addressing mode in that case would change the semantics of
+the operations.
+
+\subsection{C++}
+
+It is worth at this point to compare certain C++ concepts to their C
+equivalents.  Even though they can be implemented in C, the stricter
+requirements, especially regarding undefined behavior, in C++ often result in
+better code generation.
+
+Converting an object to one of its bases may involve a pointer adjustment if the
+base is not the single root of the hierarchy (in which case it is
+pointer-interconvertible).  This conversion usually requires an extra check for
+the \texttt{nullptr}, since it must yield another \texttt{nullptr}.  In
+architectures where pointers are memory offsets and \texttt{nullptr} is the
+literal value \texttt{zero}, unconditionally adding the base offset would not
+give the correct result.  Listing \ref{lst:c:ub_conv} shows the generated code
+for this case.
+
+\begin{figure}[ht]
+    \centering
+    \begin{multicols}{2}
+        \begin{lstlisting}[
+            style=c++,
+            label={lst:c:ub_conv},
+            caption={Base pointer conversion},
+        ]
+struct S { int s; };
+struct T { int t; };
+struct U : S, T { int u; };
+
+void f(S*), g(T*);
+void h(U *p) { f(p); g(p); }
+        \end{lstlisting}
+        \columnbreak
+        \begin{lstlisting}[style=x86]
+_Z1hP1U:
+    push   rbp
+    mov    rbp, rdi
+    call  _Z1fP1S@PLT
+    lea    rax, 4[rbp]
+    test   rbp, rbp
+    cmovne rbp, rax
+    mov    rdi, rbp
+    pop    rbp
+    jmp   _Z1gP1T@PLT
+        \end{lstlisting}
+    \end{multicols}
+\end{figure}
+
+An implementation in C would need similar checks to replicate this
+functionality.  However, C++ also states that a member function call through a
+\texttt{nullptr} results in undefined behavior.  This allows the compiler to
+eliminate the check for member function calls (listing \ref{lst:c:ub_member}).
+
+\begin{figure}[ht]
+    \centering
+    \begin{multicols}{2}
+        \begin{lstlisting}[
+            style=c++,
+            label={lst:c:ub_member},
+            caption={Member function optimization},
+        ]
+struct S { int s; void g(void); };
+struct T { int t; void g(void); };
+struct U : S, T { int u; };
+
+void h(U *p) { p->f(); p->g(); }
+        \end{lstlisting}
+        \columnbreak
+        \begin{lstlisting}[style=x86]
+_Z1hP1U:
+    push rbx
+    mov  rbx, rdi
+    call _ZN1S2fsEv@PLT
+    lea  rdi, 4[rbx]
+    pop  rbx
+    jmp _ZN1T2ftEv@PLT
+        \end{lstlisting}
+    \end{multicols}
+\end{figure}

@@ -95,6 +95,10 @@ same order as $n$ --- i.e. $\Theta(n)$ --- or, more speecifically, at least of
 the same order as $n$ --- i.e. $\Omega(n)$ --- this means the length of each
 chain is $O(1)$.
 
+% TODO gcc hashtab
+% TODO https://gcc.gnu.org/git/?p=gcc.git;a=blob;f=include/hashtab.h;hb=HEAD
+% TODO https://gcc.gnu.org/git/?p=gcc.git;a=blob;f=libiberty/hashtab.c;hb=HEAD
+
 \begin{multicols}{2}
     \begin{lstlisting}[style=c,xleftmargin=0px,xrightmargin=0px]
 struct entry { u32 /*h,*/ k, v; };

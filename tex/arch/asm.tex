@@ -1,0 +1,72 @@
+\section{Machine language}
+\label{sec:arch:asm}
+
+\subsection{Stack}
+
+There are no "functions" per se in machine language\footnotemark.  Control flow
+happens with \textit{jump} instructions, including the equivalent of a function
+call.  The beginning of the call (equivalent to the initial expression followed
+by parentheses, \texttt{f(…)}) can be a simple, unconditional jump.  The
+destination address is either a fixed value, as determined by the linker either
+at link- or runtime for static or dynamic linking, or a dynamic value (i.e. from
+a register) in the case of an indirect call.  The end of the call (equivalent to
+the \texttt{return} expression), conversely, is variable: it has to return to
+the original place, right after the previous jump instruction.
+
+\footnotetext{
+    Regardless, this section will use terms such as "call" and "return" for
+    simplicity of description.}
+
+This is done via a region of memory called the \textit{stack}.  It contains
+different types of data about the runtime execution of the program, as will be
+described in this section, but the one which is immediately interesting is the
+\textit{return address}.  Using the stack, the protocol for jumping to a new
+code location and then back is:
+
+\begin{itemize}
+    \item
+        Before the switch to the new location in code, the return address is
+        pushed onto the stack.  This is the address of the next instructions
+        after the imminent jump.
+    \item
+        When the target code is done and wishes to return to the previous
+        location, it pops the return value from the stack and jumps to it.
+\end{itemize}
+
+This process can be arbitrarily nested: the stack maintains the sequence of
+return addresses required to return to the previous location at each level,
+limited only by the total size of the stack\footnotemark.
+
+\footnotetext{Limited roughly by the total size of memory, or a multiple of it.}
+
+The region of memory where the stack is located is a closed range
+denoted by two registers\footnotemark:
+
+\footnotetext{
+    Implementation details in this section all use the x86 architecture as an
+    example, but these concepts are universal and most other architectures have
+    very similar concepts.}
+
+\begin{description}
+    \item[\texttt{rbp}]
+        is the \textit{base pointer}, the starting location of the stack.
+    \item[\texttt{rsp}]
+        is the \textit{stack pointer}, the location of the last element.
+\end{description}
+
+\begin{description}
+    \item[\texttt{push}]
+        increments the pointer and writes a value to its location, equivalent
+        to (where \texttt{x} is a 32-bit register/value):
+        \begin{lstlisting}[style=x86]
+add rsp, 4
+mov [rsp], x
+        \end{lstlisting}
+    \item[\texttt{pop}]
+        reads the value pointed to by the pointer and decrements the pointer,
+        equivalent to (where \texttt{x} is a 32-bit register):
+        \begin{lstlisting}[style=x86]
+mov x, [rsp]
+sub rsp, 4
+        \end{lstlisting}
+\end{description}

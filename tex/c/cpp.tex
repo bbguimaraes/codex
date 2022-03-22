@@ -137,3 +137,17 @@ join(x, y)
 // str(x ## y)
 // "x ## y"
 \end{lstlisting}
+
+\subsection{Macro metaprogramming}
+
+\begin{lstlisting}[style=c]
+#define PROMOTE(x) (+(x))
+\end{lstlisting}
+
+\begin{lstlisting}[style=c]
+#define PROMOTE_TO(x, y) (1 ? (x) : (y))
+\end{lstlisting}
+
+\begin{lstlisting}[style=c]
+#define IS_SIGNED(x) (PROMOTE(-1, x) < PROMOTE(1, x))
+\end{lstlisting}

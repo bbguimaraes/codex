@@ -109,3 +109,65 @@ int main(void) {
     std::puts(s);
 }
 \end{lstlisting}
+
+\subsection{Anachronisms}
+
+The legacy of C's predecessors --- BCPL and B --- is apparent in many aspects of
+the language, leading to surprises and ``infelicities'' (\cite{Ritchie1996}).
+Section \secref{subsec:c:storage} already mentioned the \texttt{auto} and
+\texttt{register} keywords, a relic of BCPL's untyped variables (the former
+later resurrected in C++ for automatic type inference).
+
+\paragraph{\texttt{\&\&} and \texttt{||} precedence}
+
+Both of those languages predate the \texttt{\&\&} and \texttt{||} operators.
+They instead relied on context-dependent interpretation of the single-character
+\texttt{\&} and \texttt{|} operators, which were the familiar bitwise operations
+in regular expressions but had the effect of the logical operators inside an
+\texttt{if} statement.  This resulted in expressions such as:
+
+\begin{lstlisting}[style=c]
+if(x == y & z)
+    // ...
+\end{lstlisting}
+
+which tests whether \texttt{x} is equal to \texttt{y} and \texttt{z} is not
+zero.  This explains the surprising precedence rules for the \texttt{||},
+\texttt{\&\&}, \texttt{\&}, \texttt{|}, and \texttt{==} operators (listed here
+in increasing order of precedence), and why parentheses are often required in
+expressions such as the following:
+
+\begin{lstlisting}[style=c]
+if((x & y) == z)
+    // ...
+\end{lstlisting}
+
+where \texttt{\&} would have lower precedence than \texttt{==} otherwise,
+usually not what is intended.
+
+\paragraph{\texttt{struct} members}
+
+The V6 Unix source code contains several occurrences of a curious pattern:
+
+\begin{lstlisting}[style=c]
+#define SW 0177570
+
+struct { int integ; };
+
+if(SW->integ == 0)
+    // ...
+\end{lstlisting}
+
+This syntax is a consequence of several aspects of early compilers
+(\cite{Lions1977}).  Casts did not exist at the time, there was a single
+namespace for structure members, and there were no checks for the type of
+structure used on the left-hand side of the \texttt{->} operator.  This meant
+that the expression above was equivalent to the following in modern C:
+
+\begin{lstlisting}[style=c]
+if(*(int*)((char*)SW + 0) == 0)
+    // ...
+\end{lstlisting}
+
+i.e. the value of \texttt{SW} was treated as the memory address of a(n
+anonymous) structure containing an integer member at offset \texttt{0}.

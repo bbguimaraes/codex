@@ -1,5 +1,165 @@
 \section{Memory}
 
+\subsection{Virtual memory}
+
+Modern operating systems for most machines which are not small embedded
+platforms do not expose memory directly to processes.  Instead, a hardware
+component called a \textit{Memory Management Unit} (MMU) mediates access to
+physical memory.  Memory as seen by the processes is called \textit{virtual
+memory}.  The MMU translates the \textit{virtual memory addresses} used by the
+processes into real, \textit{physical memory addresses} according to the
+configuration done by the operating system.  Virtual memory is thus a
+software-controlled set of memory addresses.
+
+This mapping is not restricted to simply address translation.  Any time an
+access to an unmapped address occurs, a \textit{page fault} is generated (memory
+is divided in pages, as will be explained later).  This is analogous to a
+hardware interrupt, and the operating system can configure a handler which will
+direct the MMU to take one of several possible actions to resolve the address:
+
+\begin{itemize}
+    \item
+        Immediately assign a physical memory address and service the memory
+        request.  This is called a \textit{soft page fault}.
+    \item
+        Defer the decision to the operating system.  This is called a
+        \textit{hard page fault}.
+    \item
+        Immediately fail the memory access.  This is the source of the
+        (in)famous \textit{segmentation fault} or \textit{access violation}
+        failure.
+\end{itemize}
+
+This level of indirection is only practically possible because it is implemented
+in part in hardware.  It is nonetheless immensely useful: the possibility of
+deferral of faults to a software process allows the implementation of several
+mechanisms which are widely used in modern operating systems and programs.
+
+\subsubsection{Virtual address space}
+
+From the operating system's perspective, one of the most important is the
+possibility of setting up distinct mappings for each process, which are also
+separate from that of the kernel.  This is the fundamental method of separation
+between processes and between user and kernel space.  Because of the
+unprivileged nature of user mode (MMU configuration is only allowed when the CPU
+is in kernel mode), the operating system can reconfigure mappings whenever it
+schedules a new process to guarantee it only has access to its own view of
+memory.  Kernel memory is thus protected from user space access, and each
+process is restricted to its own address space\footnotemark.
+
+\footnotetext{
+    Recently, even this coarse dichotomy has been deemed insufficient, and
+    further separation between distinct areas of kernel memory is being
+    considered, e.g. \url{https://lwn.net/Articles/886494/}.}
+
+This level of indirection in memory accesses can also be used to radically
+change the contents of physical memory in a way that is transparent to the user
+processes:
+
+\begin{itemize}
+    \item
+        Since there is no relation between virtual and physical addresses, a
+        large contiguous memory allocation can be serviced by dividing it into
+        several smaller ones, potentially reducing overall memory fragmentation.
+    \item
+        Process data do not even have to reside in memory at all: when system
+        memory is scarce --- either due to allocations or caching ---
+        less-frequently-used memory regions can be move to slower storage (such
+        as a hard drive) to make space and if/when they are requested again, a
+        process called \textit{swapping}.
+
+        Doing so takes advantage of \textit{locality of reference}, a common
+        memory access pattern in the execution of programs: memory tends to be
+        referenced locally repeatedly, either spatially (adjacent regions) or
+        temporally (repeating accesses, such as in a loop).  Only the relevant,
+        relatively small regions which are presently referenced need to be in
+        memory, in what is called the \textit{resident set} of the
+        process\footnotemark.
+    \footnotetext{
+        As displayed, for example, in the \texttt{rss} (resident set size) field
+        in \texttt{ps(1)} or the \texttt{RES} column in \texttt{top(1)}.}
+    \item
+        The operating system and the MMU may also support \textit{memory
+        protection}, usually in the form of several permission bits which
+        control access to certain memory regions.  Protection bits can also be
+        used to make regions read-only, prevent their execution as code,
+        completely forbid access, etc.
+    \item
+        Regions can be shared by multiple processes.  This can happen when
+        multiple processes are created for the same program or use the same
+        shared library (the text segment can be shared), as a result of the
+        \texttt{fork} system call (all memory is initially shared), or via
+        explicit requests (using \texttt{shmget(2)}, \texttt{mmap(2)}, etc.).
+        These common regions can be set up in either \textit{private} or
+        \textit{shared} mode.  Modifications made to private regions are not
+        visible to other processes: the region is duplicated by the operating
+        system when it is first written.
+    \item
+        Memory regions do not have to be allocated or initialized immediately:
+        they can simply be reserved and serviced when needed.  For example, a
+        special segment in a process' address space is the BSS segment (the name
+        originates historically from \textit{block started by symbol}), a region
+        of memory which is guaranteed to be zero-initialized\footnotemark.  When
+        a process is started, this region is not allocated by the operating
+        system: it is simply marked as ``zero-initialized'' and materialized on
+        first access.
+    \footnotetext{
+        In C, it corresponds to variables of static storage duration declared
+        \texttt{extern} and default- or zero-initialized.}
+    \item
+        Files can be directly mapped as part of the virtual address space of a
+        process.  This can reduce the overhead of making multiple system calls
+        to read and write data: the access can be made as if the contents of the
+        file were a regular memory region and is handled transparently by the
+        MMU.
+\end{itemize}
+
+\subsubsection{Pages}
+
+Due to the size of physical memory commonly found in current systems --- on the
+order of billions of bytes (GiB) --- it is prohibitive to treat each memory
+address individually.  Memory is instead divided into \textit{pages}: contiguous
+regions of a predefined size.  A common page size, used in the Linux kernel, is
+4096 bytes (4KiB)\footnotemark.  This affects several aspects of the system:
+many operations are required to be \textit{page-aligned} --- i.e. are restricted
+to begin at page boundaries --- for this reason.  Similarly, MMU configuration
+is usually done in terms of pages, in what are called \textit{page tables}.
+
+\footnotetext{
+    Linux also has \textit{huge pages}, which are considerably larger (anywhere
+    from 2MiB to 1GiB), to mitigate some of the problems described in this
+    section.}
+
+Even that, however, is not sufficient.  In a 32-bit system --- where a space of
+4GiB is addressable --- with 4KiB pages, $2^{20}$ entries would be necessary
+($2^{32}/2^{12} = 2^{20}$).  That overhead would be prohibitive for any
+non-trivial amount of per-page information, and hopeless in a 64-bit address
+space.  Configuration is done instead in multiple levels: virtual addresses are
+split in several parts, called \textit{page directories}, one for each level.
+Directories can be sparsely allocated, and a single entry can be used for
+several contiguous pages, making it possible for mappings of several processes
+to remain in memory\footnotemark.  These directories are usually walked in
+hardware by the MMU to resolve virtual addresses.
+
+\footnotetext{
+    Although note that \textit{address space layout randomization} (ASLR), a
+    security measure present in modern operating systems, conflicts with this
+    goal.}
+
+\subsubsection{TLB}
+
+Even though virtual memory accesses are mostly performed by hardware components,
+doing a full translation on each access would impose a significant overhead.
+For this reason, the CPU itself employs a cache for some of the page table
+entries (e.g. those in its L1 cache).  This cache is called the
+\textit{translation lookaside buffer} (TLB).  Memory accesses whose address are
+found in the cache go directly to main memory (or to one of the memory caches).
+A cache miss triggers a page lookup as described above; this is an expensive
+process and frequent TLB misses can significantly affect the performance of a
+program.  This is one of the reasons for the inefficiency of context switches
+and process scheduling: they can result in a partial or complete TLB flush,
+since a process cannot reuse the virtual memory mappings of another one.
+
 \subsection{Cache}
 
 \label{subsec:arch:cache}

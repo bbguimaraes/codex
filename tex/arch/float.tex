@@ -1,0 +1,246 @@
+\section{Floating-point numbers}
+
+% TODO
+% https://randomascii.wordpress.com/2012/01/23/stupid-float-tricks-2/
+% https://randomascii.wordpress.com/2012/02/11/they-sure-look-equal/
+% https://randomascii.wordpress.com/2012/03/08/float-precisionfrom-zero-to-100-digits-2/
+% https://randomascii.wordpress.com/2012/03/11/c-11-stdasync-for-fast-float-format-finding/
+% https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
+
+The representation of binary floating-point numbers as defined by the IEEE-754
+standard is composed of three elements: \begin{enumerate*}[1)] \item sign bit,
+\item exponent, and \item mantissa \end{enumerate*}.  The sizes and ranges for
+the second and third values depend on the overall storage size reserved for the
+number; common sizes are shown in table \ref{tbl:arch:float}.
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{cccccc}
+        & Common name & C type & Total bits & Exponent & Mantissa \\
+        \hline
+        \texttt{f16} & half precision & --- & 16 & 5 & 10 \\
+        \texttt{f32} & single precision & \texttt{float} & 32 & 8 & 23 \\
+        \texttt{f64} & double precision & \texttt{double} & 64 & 11 & 52 \\
+        \texttt{f128} & quadruple precision & \texttt{long double} & 128 & 15
+            & 112 \\
+    \end{tabular}
+    \caption{Common floating-point sizes}
+    \label{tbl:arch:float}
+\end{table}
+
+Note that the C standard does not require any of the three types in the table,
+nor that they be implemented using IEEE-754 (but if they are, those must be the
+corresponding types).  Additionally, if 128-bit numbers are not supported,
+\texttt{long double} may be implemented as an unspecified ``extended'' format
+whose only requirement is greater precision than a \texttt{double} (e.g. the x87
+80-bit extended precision format).  Regardless of the size, the value of a
+binary floating-point number is always calculated in the same manner:
+
+\begin{align*}
+f = s \; b^e m \\
+\end{align*}
+
+In reality, these components are not stored in their original form.  The most
+significant bit records the sign $s$, just as in one and two's complement
+representations (v. section \secrefpar{subsec:arch:ones_twos_comp}).  The base
+$b$ is always implicitly 2, and the exponent $e$ is stored with a \textit{bias}
+(v. section \secrefpar{subsec:arch:float_exp}).  Only the fractional bits of the
+mantissa $m$ are stored, an implicit leading digit of 1 is always added.  Thus,
+for a single-precision number (\texttt{f32}), the value based on the stored
+components is:
+
+\begin{align*}
+    (-1)^s \; 2^{e - 127} \left(1 + m \; 2^{-23}\right) \\
+\end{align*}
+
+Where $m$ is the stored bits of the mantissa interpreted as an unsigned integer.
+An alternate formulation, where $m_i$ means ``the $i$th bit of the stored
+mantissa'', is:
+
+\begin{align*}
+    (-1)^s \; 2^{e - 127} \left(1 + \sum_{i=1}^{23} m_{23-i} 2^{-i}\right) \\
+\end{align*}
+
+From these equations, the minimum and maximum (absolute) representable values
+can be derived.  The minimum value has an exponent of $-126$ and a significand
+of $1$ (i.e. the stored mantissa is zero), while the maximum value has an
+exponent of $127$ and a mantissa whose bits are all ones:
+
+\begin{align*}
+    \texttt{FLT\_MIN} &= \texttt{0 00000001 00000000000000000000000}_2 \\
+                      &= \texttt{0080 0000}_{16} \\
+                      &= 2^{-126} \\
+                      &\approx 1.1754943508223 \times 10^{-38} \\
+    \texttt{FLT\_MAX} &= \texttt{0 11111110 11111111111111111111111}_2 \\
+                      &= \texttt{7f7f ffff}_{16} \\
+                      &= 2^{128} - 2^{128 - 24} \\
+                      &\approx 3.4028234663853 \times 10^{38} \\
+\end{align*}
+
+The following C code can be used to extract each of the components above from a
+single-precision value and reassemble them into the original number.  In the
+second part, size limits are disregarded in the calculation of the exponent and
+significand for simplicity of demonstration.  The standard library provides
+several functions in \texttt{<math.h>} which perform this type of operations;
+they are shown in comments next to their equivalent.
+
+\begin{lstlisting}[style=c]
+// input
+extern float f;
+// binary representation
+u32 uf;
+static_assert(sizeof(uf) == sizeof(f));
+memcpy(&uf, &f, sizeof(uf));
+// disassemble
+const i32 s = uf >> 31; // (bool)signbit(f)
+const i32 e = ((uf >> 23) & 0xff) - 127; // ilogbf(f)
+const i32 m = uf & 0x7fffff;
+// reassemble
+const float fs = 1 - (s << 1); // copysignf(1, f)
+const float fe = 1 << e; // scalbnf(1, e)
+const float fm = 1 + m / 0x1p23f; // 1 + scalbnf(m, -23)
+f = fs * fe * fm;
+\end{lstlisting}
+
+\subsection{Exponent}
+
+\label{subsec:arch:float_exp}
+
+The representation of the exponent, which can be a negative number, is different
+from the ones shown in section \secref{subsec:arch:ones_twos_comp}: the stored
+value is instead \textit{biased}.  For single-precision numbers, with 8-bit
+exponents, the actual stored value is the exponent plus 127.  Special treatment
+is given to numbers with an encoded exponent value of zero (v. section
+\secrefpar{subsec:arch:subnormal}) and 255 (the maximum value, used for infinity
+and \texttt{NaN} values), so the effective exponent range is $[1, 254] - 127 =
+[-126,127]$.  This range has one more value in the non-negative range than the
+negative range, also unlike two's complement.
+
+The main advantage of this storage format is that numbers in the normal range
+(i.e. excluding \texttt{NaN}s and infinities) can be compared lexicographically
+directly in their encoded format as if they were regular signed integers.  This
+would not be possible in a complement representation since the (exponent's) sign
+bit would place negative numbers after non-negative numbers.
+
+\subsection{Precision}
+
+As any numerical representation in computers, floating-point numbers can
+represent only a finite set of values.  However, because of the exponent
+multiplication and the fixed number of bits in the mantissa, the range of this
+precision is variable.  This is manifested in two ways.  First, if a large
+portion of the bits of the mantissa are required to represent the integral part,
+few bits will be available for the fractional part, resulting in less precision
+for fractional digits.  The absolute precision range also depends on the
+magnitude of the number, since the number of bits in the mantissa is constant:
+the larger the number, the larger the exponentiated multiplier, and the larger
+the gap between each value representable by the mantissa.
+
+A visual conceptualization of the IEEE-754 storage format can be helpful in
+understanding these precision limitations.  The significand has an implicit
+digit of one, while the mantissa represents fractional digits, meaning the
+effective range of the significand is [1, 2).  A crucial observation is that,
+for any number whose exponent is $e$ and whose mantissa is all ones, the next
+representable value has exponent $e + 1$ and a mantissa of zero\footnotemark.
+This means every value which is representable also has a \emph{unique}
+representation.
+
+\footnotetext{
+    In fact, the bit representation of the number can simply be treated as an
+    unsigned integer in this operation, which is equivalent to the standard
+    function \texttt{nextafter}, for all values in the range
+    $[\texttt{0},\texttt{FLT\_MAX}]$.  Similarly, the same is true in the other
+    direction for negative numbers in the range
+    $[\texttt{-FLT\_MAX},\texttt{-0}]$, although note that there is no such
+    relation in the transition between negative and positive values in either
+    direction.  See figure \secref{fig:arch:float_ranges}.}
+
+In this perspective, each exponent value can be seen as a sub-range of the
+entire range of representable values (i.e. [\ident{FLT_MIN},\ident{FLT_MAX}]).
+Each covers the range $[2^e,2^{e+1})$, where $e$ is the value of the exponent,
+and is in turn divided equally into $2^n$ sub-ranges, where $n$ is the number of
+bits in the mantissa\footnotemark.  It is thus obvious (hopefully) why the
+precision is variable according to the magnitude of the number: each sub-range
+has the same number of divisions, so larger sub-ranges will have larger
+intervals between each division.
+
+\footnotetext{
+    The value of the mantissa can also be considered an \emph{offset} into the
+    range denoted by the exponent, or conversely, the exponent can also be seen
+    as \emph{shifting} the significant digits of the mantissa.}
+
+As an extreme example, numbers close to \ident{FLT_MAX} have, as shown above, an
+exponent of 127.  The smallest number with that exponent is $2^{127}$, which in
+unsigned integer notation is \texttt{0x80000000000000000000000000000000}, i.e.
+a one followed by 127 zeroes.  In other words, the leading one bit implicit in
+the significand is shifted left 127 positions.  The next representable number is
+the one where the mantissa has its least significant bit set, i.e. $2^{127} \;
+(1 + 2^{-23})$.  The interval between those numbers is $2^{127} \; 2^{-23} =
+2^{127-23} = 2^{104}$.  If these numbers are involved in additions/subtractions
+with others which contain any extra digits inside this enormous interval, those
+digits will be discarded since there is not enough precision in the mantissa to
+represent them.  In general, operations between numbers of similar magnitude
+have the most precision.
+
+\subsection{Subnormal numbers}
+
+\label{subsec:arch:subnormal}
+
+In order to cover the range $(-\texttt{FLT\_MIN},\texttt{FLT\_MIN})$, IEEE-754
+includes as an extension a category of numbers called \textit{subnormal}.  These
+numbers have a biased exponent of zero, but their effective exponent is
+considered to be one and the implicit leading bit in the significand is not
+added.  We can now depict the full range of values representable by
+single-precision IEE-754 numbers (figure \ref{fig:arch:float_ranges}).
+
+\subsection{Machine epsilon}
+
+\begin{figure}[p]
+    \begin{align*}
+        1 \; 11111111 \; 00000000000000000000000_2 &= -\texttt{INFINITY} \\
+        1 \; 11111110 \; 11111111111111111111111_2 &= -\texttt{FLT\_MAX}
+            = -2^{128} + 2^{128-24} \\
+        \vdots \\
+        1 \; 01111111 \; 00000000000000000000001_2 &= -1 - 2^{-23} \\
+        1 \; 01111111 \; 00000000000000000000000_2 &= -1 \\
+        1 \; 01111110 \; 11111111111111111111111_2 &= -1 + 2^{-24} \\
+        \vdots \\
+        1 \; 00000001 \; 00000000000000000000000_2 &= -\texttt{FLT\_MIN}
+            = -2^{-126} \\
+        1 \; 00000000 \; 11111111111111111111111_2 &= \text{min. subnormal}
+            = -2^{-126} \; (1 + 2^{-23}) \\
+        \vdots \\
+        1 \; 00000000 \; 00000000000000000000001_2 &= -\texttt{FLT\_TRUE\_MIN}
+            = -2^{-127} \; 2^{-23} = -2^{-140} \\
+        1 \; 00000000 \; 00000000000000000000000_2 &= -0 \\
+        0 \; 00000000 \; 00000000000000000000000_2 &= 0 \\
+        0 \; 00000000 \; 00000000000000000000001_2 &= \texttt{FLT\_TRUE\_MIN}
+            = 2^{-127} \; 2^{-23} = 2^{-140} \\
+        \vdots \\
+        0 \; 00000000 \; 11111111111111111111111_2 &= \text{max. subnormal}
+            = 2^{-126} \; (1 - 2^{-23}) \\
+        0 \; 00000001 \; 00000000000000000000000_2 &= \texttt{FLT\_MIN}
+            = 2^{-126} \\
+        \vdots \\
+        0 \; 01111110 \; 11111111111111111111111_2 &= 1 - 2^{-24} \\
+        0 \; 01111111 \; 00000000000000000000000_2 &= 1 \\
+        0 \; 01111111 \; 00000000000000000000001_2 &= 1 + 2^{-23} \\
+        \vdots \\
+        0 \; 11111110 \; 11111111111111111111111_2 &= \texttt{FLT\_MAX}
+            = 2^{128} - 2^{128-24} \\
+        0 \; 11111111 \; 00000000000000000000000_2 &= \texttt{INFINITY} \\
+    \end{align*}
+    \caption{Adjacent floating-point ranges}
+    \label{fig:arch:float_ranges}
+\end{figure}
+
+A standard measurement of the precision of floating-point representations is the
+\textit{machine epsilon}: the distance between the value 1 and the next smallest
+value that is greater than it, i.e. the smallest value $\epsilon$ which
+satisfies $1 + \epsilon \neq 1$.  For an IEEE-754 single-precision number, the
+previous section has shown that $\epsilon = 2^{-23}$.
+
+Because the precision of a floating-point number varies according to its
+magnitude, this distance increases as a function of the exponent.  In general,
+the absolute distance between a floating-point number with exponent $e$ and the
+next representable value is $2^e \epsilon$.  This value can be used to calculate
+relative error, turn greater-than-or-equal comparisons into greater-than, etc.

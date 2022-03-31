@@ -18,6 +18,7 @@ LISTINGS := \
 	algo/sort/quick \
 	algo/sort/selection.o \
 	algo/upper_bound.o \
+	arch/float/float.o \
 	concurrency/queue_atomic.o \
 	concurrency/queue_cas.o \
 	concurrency/queue_mtx.o \

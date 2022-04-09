@@ -1,0 +1,170 @@
+\section{Linux}
+
+\subsection{Capabilities}
+
+Traditionally, a \textit{privileged} process is Unix systems is one with
+effective UID of 0.  Many system administrator operations in the kernel can only
+be done by this type of process.  While very simple to implement, this scheme
+has the disadvantage that the security model is binary: a process has either
+\emph{no} or \emph{all} privileges.
+
+\textit{Capabilities} are an improvement present in Linux and some other Unix
+derivatives.  Initially part of the unsuccessful POSIX 1003.1e draft standard,
+capabilities break the single "privileged" status of a process\footnotemark into
+many parts (v. \texttt{capabilities(7)} for the full list).  The kernel then
+checks for a specific capability instead of an UID; a privileged process can
+drop all capabilities it does not need and greatly reduce the possibility that
+it could be used as an attack vector in a compromised system.
+
+\footnotetext{
+    Throughout this section, "process" is used for simplicity, but note that
+    capabilities are a thread (i.e. task) attribute.}
+
+As a simple example, a program which sets the system time, such as \texttt{date
+--set …}, needs only the \ident{CAP_SYS_TIME} capability.  On a traditional Unix
+system without capabilities, that program would need to have an effective UID of
+0, meaning it could in principle perform \emph{any} privileged operation.  There
+is no reason for it to be able to change mount points, network configuration, or
+perform any of the many other system administration operations: capabilities
+allow a process to restrict its privileges to just those necessary for its
+function.
+
+While capabilities have been referred to as "a set" of "a process", that is a
+simplification of the actual Linux implementation.  They can be assigned to
+processes and files, and there is not one but four sets.
+
+\subsubsection{Sets}
+
+Ultimately, capabilities are sets of 64 bits associated with each process or
+file.  Three sets are associated with each, while two other are specific to
+processes:
+
+\begin{itemize}
+    \item
+        The \textit{effective} set is the one used by the kernel in its
+        permission checks.
+    \item
+        The \textit{permitted} set serves, in conjunction with the effective
+        set, an analogous function to the real/effective UIDs: a process can
+        temporarily reduce its effective (and inheritable) set and later restore
+        it to any subset of its permitted set.  Removing a capability from this
+        set is irreversible (by the process, but see capabilities attached to
+        files below).
+    \item
+        The \textit{inheritable} set determines which capabilities are preserved
+        by a privileged process after an \texttt{exec} system call\footnotemark.
+        Only privileged processes (\ident{CAP_SETPCAP}) can add capabilities to
+        this set.
+    \item
+        The \textit{ambient} set determines which capabilities are preserved by
+        an unprivileged process after an \texttt{exec} system call.  It is a
+        subset of the intersection of the permitted and inheritable sets.
+    \item
+        The \textit{bounding} set ultimately limits all capabilities which a
+        process can acquire.  This set is maintained when an \texttt{exec}
+        system call is performed.  The \texttt{init} process starts with a full
+        set, and at any time a privileged process (\ident{CAP_SETPCAP}) can
+        irreversibly remove a capability from its set --- and from all of its
+        descendants as a consequence.
+\end{itemize}
+
+\footnotetext{
+    Capabilities are not preserved across \texttt{exec} calls because the call
+    may fail and may require privileges that are not required by the new
+    executable (e.g. \ident{CAP_DAC_OVERRIDE}).}
+
+The sets associated with a process can be examined via the \texttt{proc} file
+system:
+
+\begin{lstlisting}
+$ p=$(pgrep --full --oldest systemd-timesyncd)
+$ grep Cap /proc/$p/status
+CapInh: 0000000002000000
+CapPrm: 0000000002000000
+CapEff: 0000000002000000
+CapBnd: 0000000002000000
+CapAmb: 0000000002000000
+$ capsh --decode=0000000002000000
+0x0000000002000000=cap_sys_time
+$ getpcaps $p
+2461: cap_sys_time=eip
+\end{lstlisting} %$
+
+\subsubsection{Files}
+
+Sets can be associated with files using \texttt{security} extended attributes to
+grant new capabilities to processes when it is used in an \texttt{exec} system
+call:
+
+\begin{itemize}
+    \item The \textit{permitted} set is used to grant new capabilities.
+    \item
+        The \textit{inheritable} set further limits a process' own inheritable
+        set when the preserved capabilities are calculated.
+    \item
+        The \textit{effective} set similarly limits a process' own effective
+        set.
+\end{itemize}
+
+In addition, the ambient set of a process is cleared if the executed file has
+any of: set-user-ID, set-group-ID, or file capabilities.  The complete equations
+for the new permitted ($P'_p$), effective ($P'_e$), inheritable ($P'_i$),
+ambient ($P'_a$), and bounding ($P'_b$) sets based on the previous ($P$) and
+file ($F$) sets are:
+
+\begin{align*}
+    P'_p &= (P_i \cap F_i) \cup (P_b \cap F_p) \cup P_a \\
+    P'_a &= \texttt{!file\_privileged} \times P_a \\
+    P'_e &= F_e\text{ ? }P'_p\text{ : }P'_a \\
+    P'_i &= P_p \\
+    P'_b &= P_b \\
+\end{align*}
+
+\subsubsection{UID transitions}
+
+The following changes, designed to adhere to the traditional Unix semantics, are
+made to the capability sets of a process when it changes UID:
+
+\begin{itemize}
+    \item
+        If either the real, effective, or saved set-user IDs are zero but none
+        are after the transition, the permitted, effective, and ambient sets are
+        cleared.
+    \item
+        If the effective UID transitions from zero to non-zero, the effective
+        set is cleared.  The reverse transition repopulates it using the values
+        in the permitted set.
+    \item
+        If the file system UID transitions from zero to non-zero or the reverse,
+        the same changes as the previous item are made, but restricted to a few
+        file-system-related capabilities (v. \texttt{capabilities(7)}).
+\end{itemize}
+
+The first rule can be disabled using a mechanism called \texttt{securebits}
+(also available via \texttt{libcap(3)})\footnotemark:
+
+\footnotetext{
+    V. \cite{Edge2015} for a discussion of the introduction of ambient
+    capabilities to enable unprivileged processes to inherit capabilities.}
+
+\begin{lstlisting}[style=c]
+prctl(PR_SET_SECUREBITS, prctl(PR_GET_SECUREBITS) | SECBIT_KEEP_CAPS);
+\end{lstlisting}
+
+A privileged process can use this to execute a program using an unprivileged
+user with a few select capabilities:
+
+\begin{lstlisting}[style=c]
+cap_set_secbits(cap_get_secbits() | SECBIT_KEEP_CAPS);
+setresgid(100, 100, 100);
+setresuid(1000, 1000, 1000);
+cap_t c = cap_get_proc();
+cap_clear(c);
+const cap_value_t v = CAP_NET_ADMIN;
+cap_set_flag(c, CAP_PERMITTED, 1, &v, CAP_SET);
+cap_set_flag(c, CAP_INHERITABLE, 1, &v, CAP_SET);
+cap_set_proc(c);
+cap_free(c);
+cap_set_ambient(CAP_NET_ADMIN, CAP_SET);
+execv(/* ... */);
+\end{lstlisting}

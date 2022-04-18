@@ -18,5 +18,7 @@ Repository for code experiments.  Mostly C/++.
 - [`list`](./list): linked lists.
 - [`packet_reader`](./packet_reader): structured data packet reader.
 - [`popcount`](./popcount): set bit counter.
+- [`reflection`](./reflection): basic structure reflection using C++17
+  structured bindings.
 - [`time`](./time): simple time measurement and reporting program.
 - [`yaml`](./yaml): YAML converter utility.

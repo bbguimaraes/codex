@@ -57,8 +57,16 @@ function parser:parse()
         elseif id == lexer.UNDEFINE then
             self:parse_undef()
         else
-            str = self.lexer:concat_until(lexer.NEW_LINE)
-            self:process_source(id, str, out)
+            local l = self.lexer
+            local xxx = lexer:new()
+            xxx.src, xxx.line, xxx.column = span.new(l.src), l.line, l.column
+            for _, x in ipairs(self.lexer.queue) do
+                table.insert(xxx.queue, x)
+            end
+            self:process_source(
+                id, xxx:concat_until(xxx.iter, lexer.NEW_LINE), out)
+            l.src, l.line, l.column, l.queue  =
+                xxx.src, xxx.line, xxx.column, xxx.queue
         end
     end
     self.out = table.concat(out, "\n")
@@ -111,9 +119,21 @@ end
 --- Performs a complete, recursive replacement of a source fragment.
 --- \param is_arg \see check_recursion
 function parser:replace(src, is_arg)
+    local l <const> = self.lexer
     local ret <const> = {}
     local i = 1
     while true do
+        do
+            local id <const>, name <const> = l:next()
+            if id ~= lexer.IDENTIFIER then
+                goto continue
+            end
+            local name_str <const> = name:str()
+--            local repl <const> = obj.replace(
+--                self.interface, self.out_interface,
+--                self.obj[name_str], "", 1, 1, name_str)
+            ::continue::
+        end
         local b <const>, e, name <const> = src:find("%f[%w_]([%w_]+)%f[^%w_]")
         if not b then
             table.insert(ret, src)

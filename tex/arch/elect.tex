@@ -1,0 +1,112 @@
+\section{Electronics}
+
+\begin{wrapfigure}{r}{0.3\textwidth}
+    \centering
+    \input{arch/elect/trans.tex}
+    \caption{Transistor}
+    \label{fig:arch:trans}
+\end{wrapfigure}
+
+The elemental component of digital circuits is the \textit{transistor}: a very
+small semiconductor device which can be used to control electrical signals.
+Transistors, as commonly used in circuits, have conceptually three
+\textit{terminals}: \textit{source} and \textit{drain} (i.e. input/output) and a
+\textit{gate} (figure \ref{fig:arch:trans})\footnotemark.  Whenever voltage is
+applied to the gate, current is allowed to flow from the source to the drain.
+In the absence of that voltage, no current flows through the conductor.  This
+allows current to be applied selectively according to an input signal.  Multiple
+transistors can be combined to create basic logic gates (figure
+\ref{fig:arch:trans_gates}):
+
+\footnotetext{
+    Alternative names for these terminals are \textit{emitter},
+    \textit{collector}, and \textit{base}, respectively.}
+
+\begin{itemize}
+    \item
+        An \textit{and} gate is formed with two transistors whose signals are
+        connected serially: current flows only if both inputs are enabled.
+    \item
+        An \textit{or} gate is formed with two transistors whose signals are
+        connected in parallel: current flows when either of the inputs is
+        enabled.
+\end{itemize}
+
+To simplify notation, these circuits are normally idealized in an abstract form.
+A special symbol is used instead of the full circuit and only the transistor
+gates and the output are shown, usually labeled \texttt{a}, \texttt{b}, and
+\texttt{out}, respectivelly (figure \ref{fig:arch:gate_symbols}).
+
+\begin{figure}[ht]
+    \centering
+    \begin{subfigure}{0.4\textwidth}
+        \centering
+        \begin{tikzpicture}[circuit_diagram]
+            \node[and gate] (g) {};
+            \node[left = 0.5 of g.input 1] (a) {\texttt{a}};
+            \node[left = 0.5 of g.input 2] (b) {\texttt{b}};
+            \node[right = 0.5 of g.output] (out) {out};
+            \draw (g.input 1) -- (a);
+            \draw (g.input 2) -- (b);
+            \draw (g.output) -- (out);
+        \end{tikzpicture}
+        \caption{\textit{and} gate}
+    \end{subfigure}
+    \begin{subfigure}{0.4\textwidth}
+        \centering
+        \begin{tikzpicture}[circuit_diagram]
+            \node[or gate] (g) {};
+            \node[left = 0.5 of g.input 1] (a) {\texttt{a}};
+            \node[left = 0.5 of g.input 2] (b) {\texttt{b}};
+            \node[right = 0.5 of g.output] (out) {\texttt{out}};
+            \draw (g.input 1) -- (a);
+            \draw (g.input 2) -- (b);
+            \draw (g.output) -- (out);
+        \end{tikzpicture}
+        \caption{\textit{or} gate}
+    \end{subfigure}
+    \caption{Logic gate symbols}
+    \label{fig:arch:gate_symbols}
+\end{figure}
+
+\begin{figure}[p]
+    \centering
+    \begin{subfigure}{\textwidth}
+        \centering
+        \begin{subfigure}{0.225\textwidth}
+            \input{arch/elect/trans_and0.tex}
+        \end{subfigure}
+        \begin{subfigure}{0.225\textwidth}
+            \input{arch/elect/trans_and1.tex}
+        \end{subfigure}
+        \begin{subfigure}{0.225\textwidth}
+            \input{arch/elect/trans_and2.tex}
+        \end{subfigure}
+        \begin{subfigure}{0.225\textwidth}
+            \input{arch/elect/trans_and3.tex}
+        \end{subfigure}
+        \\[2em]
+        \caption{\textit{and} gate}
+    \end{subfigure}
+    \\[2em]
+    \begin{subfigure}{\textwidth}
+        \centering
+        \begin{subfigure}{0.4\textwidth}
+            \input{arch/elect/trans_or0.tex}
+        \end{subfigure}
+        \begin{subfigure}{0.4\textwidth}
+            \input{arch/elect/trans_or1.tex}
+        \end{subfigure}
+        \\~\\
+        \begin{subfigure}{0.4\textwidth}
+            \input{arch/elect/trans_or2.tex}
+        \end{subfigure}
+        \begin{subfigure}{0.4\textwidth}
+            \input{arch/elect/trans_or3.tex}
+        \end{subfigure}
+        \\[1em]
+        \caption{\textit{or} gate}
+    \end{subfigure}
+    \caption{Logic gates}
+    \label{fig:arch:trans_gates}
+\end{figure}

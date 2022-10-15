@@ -1,0 +1,29 @@
+\begin{tikzpicture}[
+    >={Stealth[round]},
+    inner xsep = 1em,
+    minimum height = 2em,
+]
+    \begin{scope}[yshift = 4em]
+        \node[circle, draw, minimum size = 4em] {};
+        \draw[line width = 0.25em] (-0.125, -0.4) -- (-0.125, 0.4);
+        \node (source0) at (1.4142em, 1.75) {};
+        \node[minimum size = 0pt, inner sep = 0pt]
+            (drain0) at (1.4142em, -1.75) {};
+        \node (gate0) at (-2, 0) {};
+        \draw[->] (gate0) -- (-0.125, 0);
+        \draw[->, red, thick]
+            (source0) -- (1.4142em, 1.4142em) -- (-0.125, 0.1);
+        \draw[->] (-0.125, -0.1) -- (1.4142em, -1.4142em) -- (drain0);
+    \end{scope}
+    \begin{scope}[yshift = -4em]
+        \node[circle, draw, minimum size = 4em] {};
+        \draw[line width = 0.25em] (-0.125, -0.4) -- (-0.125, 0.4);
+        \node (source1) at (1.4142em, 1.75) {};
+        \node[minimum size = 0pt, inner sep = 0pt]
+            (drain1) at (1.4142em, -1.75) {};
+        \node (gate1) at (-2, 0) {};
+        \draw[->, red, thick] (gate1) -- (-0.125, 0);
+        \draw[->] (source1) -- (1.4142em, 1.4142em) -- (-0.125, 0.1);
+        \draw[->] (-0.125, -0.1) -- (1.4142em, -1.4142em) -- (drain1);
+    \end{scope}
+\end{tikzpicture}

@@ -1,0 +1,31 @@
+\begin{tikzpicture}[
+    >={Stealth[round]},
+    inner xsep = 1em,
+    minimum height = 2em,
+]
+    \node[inner sep = 0pt, minimum size = 0pt] (source) at (0.5, 2) {};
+    \node[inner sep = 0pt, minimum size = 0pt] (drain) at (0.5, -1.5) {};
+    \begin{scope}[xshift = -3em]
+        \node[circle, draw, minimum size = 4em] {};
+        \draw[line width = 0.25em] (-0.125, -0.4) -- (-0.125, 0.4);
+        \node[inner sep = 0pt, minimum size = 0pt]
+            (source0) at (1.4142em, 1.5) {};
+        \node (gate0) at (-1.5, 0) {};
+        \draw[->, red, thick] (gate0) -- (-0.125, 0);
+        \draw[->, red, thick]
+            (source) |- (source0) -- (1.4142em, 1.4142em) -- (-0.125, 0.1);
+        \draw[red, thick] (-0.125, -0.1) -- (1.4142em, -1.4142em) |- (drain);
+    \end{scope}
+    \begin{scope}[xshift = 3em]
+        \node[circle, draw, minimum size = 4em] {};
+        \draw[line width = 0.25em] (-0.125, -0.4) -- (-0.125, 0.4);
+        \node[inner sep = 0pt, minimum size = 0pt]
+            (source1) at (1.4142em, 1.5) {};
+        \node (gate1) at (-1.5, 0) {};
+        \draw[->] (gate1) -- (-0.125, 0);
+        \draw[->, red, thick]
+            (source) |- (source1) -- (1.4142em, 1.4142em) -- (-0.125, 0.1);
+        \draw (-0.125, -0.1) -- (1.4142em, -1.4142em) |- (drain);
+    \end{scope}
+    \draw[->, red, thick] (drain) -- +(0, -0.5);
+\end{tikzpicture}

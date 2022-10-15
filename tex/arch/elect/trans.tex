@@ -1,0 +1,14 @@
+\begin{tikzpicture}[
+    >={Stealth[round]},
+    inner xsep = 1em,
+    minimum height = 2em,
+]
+    \node[circle, draw, minimum size = 4em] {};
+    \draw[line width = 0.25em] (-0.125, -0.4) -- (-0.125, 0.4);
+    \node (source) at (1.4142em, 1.75) {source};
+    \node (drain) at (1.4142em, -1.75) {drain};
+    \node (gate) at (-2, 0) {gate};
+    \draw[->] (gate) -- (-0.125, 0);
+    \draw[->] (source) -- (1.4142em, 1.4142em) -- (-0.125, 0.1);
+    \draw[->] (-0.125, -0.1) -- (1.4142em, -1.4142em) -- (drain);
+\end{tikzpicture}

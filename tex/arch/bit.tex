@@ -1,0 +1,317 @@
+\section{Bits}
+
+Section \secref{sec:arch:int} discussed the representation of integral numbers
+and their associated operations as implemented by a computer processor.  This
+section looks at numbers purely as (binary) data, with little or no arithmetic
+interpretation given to their content.  Even so, just as it did for arithmetic
+operations, the binary representation has unique characteristics that can be
+used in the construction of algorithms and data structures.
+
+\subsection{Mixed arithmetic/bitwise expressions}
+
+\label{subsubsec:arch:mixed}
+
+The properties of bitwise and arithmetic operations and the circuits that
+implement them can be taken advantage of to build expressions that perform
+interesting and useful computations.
+
+\paragraph{\texttt{blsr}}
+
+Listing \ref{lst:arch:blsr} shows how a combination of a subtraction (v.
+\secrefpar{subsubsec:arch:sub}) and a bitwise \texttt{and} operation can be used
+to clear the least-significant set bit in a number.  Listing
+\ref{lst:arch:blsr_ops} demonstrates how the calculation works: subtracting one
+results in a borrow in all trailing zeroes, ultimately borrowing from the
+least-significant set bit.  As a result, this bit becomes a zero, while all
+trailing zeroes become ones.  The resulting a bit mask, when combined with the
+original values with an \texttt{and} operation, preserves all of the digits
+except for the least-significant one, which is cleared.  In particular:
+
+\begin{itemize}
+    \item
+        More-significant digits are preserved in the mask, so they remain the
+        same after the operation (\texttt{1 \& 1 = 1}, \texttt{0 \& 0 = 0}).
+    \item
+        Less-significant digits all become one in the mask, so they are
+        preserved.  This is irrelevant in this case, since they are known to be
+        zero.
+    \item
+        The least-significant set bit is cleared, since the borrowing from the
+        subtraction causes its position to become a zero in the mask.
+\end{itemize}
+
+\begin{figure}[ht]
+    \centering
+    \vspace{-\baselineskip}
+    \begin{subfigure}[t]{0.45\textwidth}
+        \begin{lstlisting}[
+            style=c++,
+            label={lst:arch:blsr},
+            caption={\texttt{blsr} using subtraction},
+        ]
+template<std::unsigned_integral T>
+constexpr auto blsr(T n) {
+    return n & (n - T{1});
+}
+        \end{lstlisting}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.45\textwidth}
+        \begin{lstlisting}[
+            label={lst:arch:blsr_ops},
+            caption={\texttt{blsr} operations in detail},
+            xleftmargin=4em,
+        ]
+ 0b1100 = 12       0b1100 = 12
+-0b0001 =  1  .-> &0b1011 = 11
+-------       |   -------
+ 0b1011 = 11 -'    0b1000 =  8
+        \end{lstlisting}
+    \end{subfigure}
+    \vspace{-\baselineskip}
+\end{figure}
+
+The function is named after the instruction in the x86 architecture which
+performs the same operation.  It can in turn be used, for example, to check if a
+number is a power of two --- i.e. if it has a single bit set (listing
+\ref{lst:arch:is_pow2}).
+
+\begin{figure}[ht]
+    \vspace{-\baselineskip}
+    \begin{lstlisting}[
+        style=c++,
+        label={lst:arch:is_pow2},
+        caption={\texttt{is\_pow2} using \texttt{blsr}},
+    ]
+constexpr bool is_pow2(std::unsigned_integral auto n) {
+    return n && !blsr(n);
+}
+    \end{lstlisting}
+    \vspace{-2\baselineskip}
+\end{figure}
+
+\subsubsection{\texttt{tzcnt}}
+
+Listing \ref{lst:arch:tzcnt} shows a method to count the trailing (i.e.
+least-significant) consecutive zeroes in a binary number.  Listing
+\ref{lst:arch:tzcnt_ops} demonstrates how the calculation works: it is
+comparable to the one in the \texttt{blsr} example.  Negation of a number using
+the two's complement representation (v. section
+\secrefpar{sec:arch:ones_twos_comp}) is equivalent to the one's complement plus
+one.  An \texttt{or} operation with the complement of the original value would
+result in all bits being set; adding one prior to it causes all trailing ones to
+revert to their original zero value and carry until the least-significant set
+bit, which similarly reverts to a zero.  The resulting value is equal to the
+complement, except all original trailing zeroes remain zeroes.  When the
+\texttt{or} operation is performed, the result will have ones except in that
+same original range of zeroes.  At this point, either complementing the result
+and doing a population count or subtracting the population count from the total
+number of bits will result in the number of trailing zeroes in the original
+value.
+
+\begin{figure}[ht]
+    \centering
+    \vspace{-\baselineskip}
+    \begin{subfigure}[t]{0.5\textwidth}
+        \lstinputlisting[
+            style=c++,
+            firstline=36,
+            lastline=40,
+            label={lst:arch:tzcnt},
+            caption={\texttt{tzcnt}},
+        ]{arch/bit/bit.cpp}
+    \end{subfigure}
+    \hspace{4em}
+    \begin{subfigure}[t]{0.375\textwidth}
+        \begin{lstlisting}[
+            style=x86,
+            label={lst:arch:tzcnt_ops},
+            caption={\texttt{tzcnt} operations in detail},
+        ]
+ 0b0010 n        0b0010 n
+^0b1111     .-> |0b1110
+-------     |   -------
+ 0b1101 ~n  |    0b1110 n | -n
++0b0001     |   ^0b1111
+-------     |   -------
+ 0b1110 -n -'    0b0001
+
+    popcount(0b0001) = 1
+4 - popcount(0b1110) = 1
+        \end{lstlisting}
+    \end{subfigure}
+    \vspace{-2\baselineskip}
+\end{figure}
+
+\subsection{Binary mask}
+
+One very useful construct when dealing with binary data is the \textit{binary
+mask}.  This mask is very similar to a \textit{boolean} value in that it has
+only two possible values, but instead of representing the \texttt{true} value as
+\texttt{1}, a value where all bits are set to \texttt{1} is used instead.  For
+example, for a 4-bit binary number:
+
+\begin{center}
+    \begin{tabular}{l|cc}
+        & \texttt{bool} & mask \\
+        \hline
+        \texttt{true}  & \texttt{0001} & \texttt{1111} \\
+        \texttt{false} & \texttt{0000} & \texttt{0000} \\
+    \end{tabular}
+\end{center}
+
+This type of mask is used extensively in programs which do logical and numeric
+extensively, since they can be combined with other operations to very
+efficiently implement branch-less conditionals, selections, etc.  While boolean
+results in languages such as C yield the traditional \texttt{bool} values, whose
+stored value is dictated to be either \texttt{0} or \texttt{1}, converting
+between these two representations can be done very simply and
+efficiently\footnotemark:
+
+\footnotetext{
+    \ident{to\_bool} could equally be implemented as \texttt{m \& 1}, which
+    would generate an \texttt{and} instruction.  The implementation shown here
+    is simpler and generalizes to more than pure binary masks, but both can be
+    useful depending on the context.
+}
+
+\begin{multicols}{2}
+    \begin{lstlisting}[style=c]
+bool to_bool(u32 m) {
+    return m;
+}
+
+u32 to_mask(bool b) {
+    return -b;
+}
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=x86]
+to_bool:
+    test  edi, edi
+    setne al
+    ret
+to_mask:
+    movzx eax, dil
+    neg   eax
+    ret
+    \end{lstlisting}
+\end{multicols}
+\vspace{-\baselineskip}
+
+It should be noted that the generated code shown on the right gives an idea of
+how these operations can be translated to machine code, but is very artificial.
+Other than the additional requirements of the calling convention, there are a
+variety of ways to generate both types of values from ALU operations.  The
+actual code generated when these operations are combined with those preceding
+and succeeding them will be highly variable, but will invariably be composed of
+simple, elemental instructions.  In particular, very rarely will they generate a
+combination of a conditional and jump instructions.  Compilers can generally
+turn this sort of operations into very efficient code.  For example, if the
+input is a regular integer, not a \texttt{bool}:
+
+\begin{multicols}{2}
+    \begin{lstlisting}[style=c]
+u32 to_mask_u32(u32 x) {
+    return to_mask(x);
+}
+    \end{lstlisting}
+    \columnbreak
+    \begin{lstlisting}[style=x86]
+to_mask_u32:
+    neg edi
+    sbb eax, eax
+    ret
+    \end{lstlisting}
+\end{multicols}
+
+\subsubsection{From another bit}
+
+This example (listing \ref{lst:arch:set_bit0}) shows a case where a binary mask
+is advantageous.  It sets the value of a given bit in a byte based on the value
+of another.  This might be used to change a flag in a bit set based on another.
+
+\begin{figure}[ht]
+    \centering
+    \vspace{-\baselineskip}
+    \begin{subfigure}[t]{0.5\textwidth}
+        \lstinputlisting[
+            style=c++,
+            firstline=19,
+            lastline=23,
+            label={lst:arch:set_bit0},
+            caption={Setting a bit based on another},
+        ]{arch/bit/bit.cpp}
+    \end{subfigure}
+    \hspace{2em}
+    \begin{subfigure}[t]{0.2\textwidth}
+        \begin{lstlisting}[style=x86]
+mov eax, edi
+shr al, 4
+and eax, 1
+neg eax
+xor eax, edi
+and eax, 4
+xor eax, edi
+ret
+        \end{lstlisting}
+    \end{subfigure}
+    \vspace{-\baselineskip}
+\end{figure}
+
+The binary mask allows the code to operate independently of the position of the
+two bits.  In particular, they could be values provided at run time and a
+similar sequence of operations could be used (listing \ref{lst:arch:set_bit1}).
+
+\begin{figure}[ht]
+    \centering
+    \vspace{-\baselineskip}
+    \begin{subfigure}[t]{0.5\textwidth}
+        \lstinputlisting[
+            style=c++,
+            firstline=29,
+            lastline=32,
+            label={lst:arch:set_bit1},
+            caption={Setting a bit based on another (param.)},
+        ]{arch/bit/bit.cpp}
+    \end{subfigure}
+    \hspace{2em}
+    \begin{subfigure}[t]{0.2\textwidth}
+        \begin{lstlisting}[style=x86]
+test  sil, dil
+setne al
+neg   eax
+xor   eax, edi
+and   eax, edx
+xor   eax, edi
+ret
+        \end{lstlisting}
+    \end{subfigure}
+    \vspace{-\baselineskip}
+\end{figure}
+
+\subsection{Exercises}
+
+\begin{enumerate}[label*=\arabic*.]
+    \item
+        \label{ex:arch:width_type}
+        The return value of the \texttt{popcnt} function in listing
+        \ref{lst:arch:blsr} is \texttt{int}.
+        \begin{enumerate}[label*=\arabic*.]
+            \item
+                \label{ex:arch:width_type:range}
+                Does that provide an acceptable range of values?  If not, what
+                type would be most appropriate for the return value?  Would the
+                answer be different if we wanted to optimize for calculation
+                speed or data size?  What is the relationship between the type
+                of the input and range of possible returned values?
+            \item
+                \label{ex:arch:width_type:impl}
+                Write a type metafunction (v. section \secrefpar{sec:c++:meta})
+                that returns the smallest type able to store the number of bits
+                in an unsigned integer of a given type.
+        \end{enumerate}
+    \item
+        \label{ex:arch:chess}
+        Describe possible forms of storage for the state of the board in a game
+        of chess and their advantages.
+\end{enumerate}

@@ -13,11 +13,13 @@ CXXFLAGS := -std=c++20 $(WARNINGS)
 TEX_INPUT := \
 	codex.bib *.tex */*.tex */*/*.tex */*.c */*/*.c */*/*.cpp
 LISTINGS := \
+	arch/bit/bit \
 	algo/bsearch.o \
 	algo/lower_bound.o \
 	algo/sort/quick \
 	algo/sort/selection.o \
 	algo/upper_bound.o \
+	arch/bit/bit.o \
 	arch/float/float.o \
 	concurrency/queue_atomic.o \
 	concurrency/queue_cas.o \

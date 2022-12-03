@@ -93,6 +93,98 @@ now no longer has an \texttt{EMPTY} element.
     ]{sol/chess1.c}
 \end{figure}
 
+\paragraph{\ref{ch:arch}.\ref{ex:arch:width_type:range}}
+
+The maximum number of bits for a given integer type (i.e. its bit width) is
+strictly less than the maximum value of that type\footnotemark.  However, it is
+significantly \emph{less} than its maximum value in a sub-linear relationship.
+Recall that the maximum value of an unsigned type of width $w$ is $2^w - 1$.
+Therefore, the relationship between the maximum value and the maximum number of
+bits is logarithmic.
+
+\footnotetext{
+    Ignoring the case of \texttt{CHAR\_BIT == 1}, where the size and width of
+    \texttt{char} would be the same --- i.e. \texttt{1}.}
+
+The sized types mentioned in the C11 standard (\cite{C2011}) are in the range
+\texttt{uint8\_t} to \texttt{uint64\_t} (i.e. 8 to 64 bits wide), so the range
+of \texttt{uint8\_t} is more than sufficient ($255 \gg 64$) to store the width
+of these types.  There is no limit imposed on maximum width an implementation
+can provide, however, so a larger type would have to be used if widths greater
+than 255 exist.
+
+\paragraph{\ref{ch:arch}.\ref{ex:arch:width_type:impl}}
+
+This solution uses a type alias implemented as \texttt{decltype} of the return
+value of a \texttt{consteval} function.
+
+\begin{lstlisting}[style=c++,caption={\texttt{min\_type\_for\_width}}]
+#include <bit>
+#include <concepts>
+#include <cstddef>
+#include <cstdint>
+#include <climits>
+
+namespace detail {
+
+template<std::size_t w>
+consteval auto min_type_for_width_impl() {
+    constexpr auto max = std::bit_width(w - 1);
+    if constexpr(max < CHAR_BIT)
+        return std::uint8_t{};
+    else if constexpr(max < 2 * CHAR_BIT)
+        return std::uint16_t{};
+    else if constexpr(max < 4 * CHAR_BIT)
+        return std::uint32_t{};
+    else if constexpr(max < 8 * CHAR_BIT)
+        return std::uint64_t{};
+}
+
+}
+
+template<std::unsigned_integral T>
+using min_type_for_width = decltype(
+    detail::min_type_for_width_impl<sizeof(T) * CHAR_BIT>());
+\end{lstlisting}
+
+We can then assert that \texttt{uint8\_t} can be used for all standard sized
+types:
+
+\begin{lstlisting}[
+    style=c++,
+    caption={Tests for \texttt{min\_type\_for\_width}},
+]
+template<std::unsigned_integral T, std::unsigned_integral WT>
+using check = std::is_same<min_type_for_width<T>, WT>;
+
+static_assert(check<std::uint8_t, std::uint8_t>());
+static_assert(check<std::uint16_t, std::uint8_t>());
+static_assert(check<std::uint32_t, std::uint8_t>());
+static_assert(check<std::uint64_t, std::uint8_t>());
+\end{lstlisting}
+
+Relaxing the type constraint allows us to check with fictitious integer types:
+
+\begin{lstlisting}[
+    style=c++,
+    caption={Extended tests for \texttt{min\_type\_for\_width}},
+]
+#include <array>
+
+template<typename T, std::unsigned_integral WT>
+using check = std::is_same<min_type_for_width<T>, WT>;
+
+template<std::size_t W>
+using fake_uint = std::array<std::uint8_t, W / CHAR_BIT>;
+
+static_assert(check<fake_uint<1ul << 7>, std::uint8_t>());
+static_assert(check<fake_uint<1ul << 8>, std::uint16_t>());
+static_assert(check<fake_uint<1ul << 15>, std::uint16_t>());
+static_assert(check<fake_uint<1ul << 16>, std::uint32_t>());
+static_assert(check<fake_uint<1ul << 31>, std::uint32_t>());
+static_assert(check<fake_uint<1ul << 32>, std::uint64_t>());
+\end{lstlisting}
+
 \paragraph{\ref{ch:algo}.\ref{ex:algo:bsearch_middle}}
 
 The expression \texttt{m = b + (e - b) / 2} is a bit unusual but a

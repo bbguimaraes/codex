@@ -113,3 +113,64 @@ range is guaranteed to already be sorted.  The minimum element of the rest of
 the unsorted range is found, swapped with the element at the beginning of the
 range, guaranteeing that the range is now partitioned with respect to the
 selected element.
+
+\subsection{Quick sort}
+
+\begin{figure}[p]
+    \centering
+    \lstinputlisting[
+        style=c++,
+        firstline=8,
+        lastline=15,
+        caption={Quick sort},
+        label={lst:algo:quick},
+    ]{algo/sort/quick.cpp}
+    \vspace{2\baselineskip}
+    \input{algo/sort/quick.tex}
+    \caption{Quick sort}
+    \label{fig:algo:quick}
+\end{figure}
+
+Quick sort\footnote{\cite{Hoare1962}} is based on the familiar method of binary
+recursion.  The range to be sorted is partitioned in two based on whether
+elements are lesser or greater than a reference element (the \textit{pivot}).
+This places that element at its correct position in the sorted range.  The
+process is then repeated for the sub-ranges on its left and right.  Recursion
+stops at the base case of a single element, which is by definition already
+sorted.  Figure \ref{fig:algo:quick} illustrates each step in this
+process\footnotemark, and listing \ref{lst:algo:quick} shows the implementation.
+It is very concise since most of the actual work is done by utility functions.
+The complexity of the entire operation is directly dependent on the partitioning
+done in each recursive step:
+
+\footnotetext{
+    Conceptually, at least.  The implementation uses the empty range as the base
+    case for simplicity.  In practice, sorting small arrays is done more
+    efficiently with other methods, so implementations choose a critical length
+    below which sorting is deferred to a different algorithm.
+}
+
+\begin{itemize}
+    \item Ordering elements around the pivot is an $O(n)$ operation.
+    \item
+        The second factor depends on the point at which the range is
+        partitioned:
+        \begin{itemize}
+            \item
+                A perfect bisection reduces the range in half, thus sorting the
+                entire range in $\log_2 n$ steps and yielding an overall
+                complexity of $O(n \log n)$.
+            \item
+                Partitions which diverge from the median value increase the
+                number of recursive steps.  The worst-case complexity is thus
+                $O(n^2)$, which happens when the range is reduced by a single
+                element in each step.
+        \end{itemize}
+\end{itemize}
+
+Despite its worst-case complexity, carefully-chosen pivot selection and
+partitioning methods\footnote{\cite{Bentley1993}} can result in very efficient
+implementations.  Together with the fact that sorting is done in-place and
+requires only a less-than operator makes it a common choice for standard
+non-stable sorting functions.  This is the origin of the name of the
+\texttt{qsort} function in the C standard library.

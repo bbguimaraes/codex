@@ -1,0 +1,291 @@
+\begin{subfigure}[t]{0.3\textwidth}
+    \centering
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw] {2}; &
+            \node (n1) [rectangle, draw] {1}; &
+            \node (n2) [rectangle, draw] {7}; &
+            \node (n3) [rectangle, draw] {5}; &
+            \node (n4) [rectangle, draw] {6}; &
+            \node (n5) [rectangle, draw] {0}; &
+            \node (n6) [rectangle, draw] {4}; &
+            \node (n7) [rectangle, draw] {3}; \\
+        };
+        \node (i) at ($ (n6.south west) - (0, 0.75) $) {i};
+        \draw[->] (i) -- ($ (n6.south west) - (0, 0.1) $);
+    \end{tikzpicture}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw] {4}; &
+            \node (n1) [rectangle, draw] {1}; &
+            \node (n2) [rectangle, draw] {7}; &
+            \node (n3) [rectangle, draw] {5}; &
+            \node (n4) [rectangle, draw] {6}; &
+            \node (n5) [rectangle, draw] {0}; &
+            \node (n6) [rectangle, draw] {2}; &
+            \node (n7) [rectangle, draw] {3}; \\
+        };
+        \node (b) at ($ (n0.south west) - (0, 0.75) $) {b};
+        \node (i) at ($ (n6.south west) - (0, 0.75) $) {i};
+        \draw[->] (b) -- ($ (n0.south west) - (0, 0.1) $);
+        \draw[->] (i) -- ($ (n6.south west) - (0, 0.1) $);
+    \end{tikzpicture}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw] {4}; &
+            \node (n1) [rectangle, draw] {1}; &
+            \node (n2) [rectangle, draw] {3}; &
+            \node (n3) [rectangle, draw] {2}; &
+            \node (n4) [rectangle, draw] {0}; &
+            \node (n5) [rectangle, draw] {6}; &
+            \node (n6) [rectangle, draw] {5}; &
+            \node (n7) [rectangle, draw] {7}; \\
+        };
+        \node (b) at ($ (n0.south west) - (0, 0.75) $) {b};
+        \node (p) at ($ (n5.south west) - (0, 0.75) $) {p};
+        \draw[->] (b) -- ($ (n0.south west) - (0, 0.1) $);
+        \draw[->] (p) -- ($ (n5.south west) - (0, 0.1) $);
+    \end{tikzpicture}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw] {0}; &
+            \node (n1) [rectangle, draw] {1}; &
+            \node (n2) [rectangle, draw] {3}; &
+            \node (n3) [rectangle, draw] {2}; &
+            \node (n4) [rectangle, draw] {4}; &
+            \node (n5) [rectangle, draw] {6}; &
+            \node (n6) [rectangle, draw] {5}; &
+            \node (n7) [rectangle, draw] {7}; \\
+        };
+        \node (b) at ($ (n0.south west) - (0, 0.75) $) {b};
+        \node (p) at ($ (n5.south west) - (0, 0.75) $) {p};
+        \draw[->] (b) -- ($ (n0.south west) - (0, 0.1) $);
+        \draw[->] (p) -- ($ (n5.south west) - (0, 0.1) $);
+    \end{tikzpicture}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw] {0}; &
+            \node (n1) [rectangle, draw] {1}; &
+            \node (n2) [rectangle, draw] {3}; &
+            \node (n3) [rectangle, draw] {2}; &
+            \node (n4) [rectangle, draw, fill = green!50] {4}; &
+            \node (n5) [rectangle, draw] {6}; &
+            \node (n6) [rectangle, draw] {5}; &
+            \node (n7) [rectangle, draw] {7}; \\
+        };
+        \node (p) at ($ (n5.south west) - (0, 0.75) $) {p};
+        \draw[->] (p) -- ($ (n5.south west) - (0, 0.1) $);
+    \end{tikzpicture}
+    \caption{Initial bisection}
+\end{subfigure}
+\vrule
+\begin{subfigure}[t]{0.3\textwidth}
+    \centering
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw] {0}; &
+            \node (n1) [rectangle, draw] {1}; &
+            \node (n2) [rectangle, draw] {3}; &
+            \node (n3) [rectangle, draw] {2}; &
+            \node (n4) [rectangle, draw, fill = green!50] {\phantom{0}}; &
+            \node (n5) [rectangle, draw]  {\phantom{0}}; &
+            \node (n6) [rectangle, draw]  {\phantom{0}}; &
+            \node (n7) [rectangle, draw]  {\phantom{0}}; \\
+        };
+        \node (i) at ($ (n3.south west) - (0, 0.75) $) {i};
+        \draw[->] (i) -- ($ (n3.south west) - (0, 0.1) $);
+        \draw[ultra thick] (n4.south west) -- (n4.north west);
+    \end{tikzpicture}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw] {2}; &
+            \node (n1) [rectangle, draw] {1}; &
+            \node (n2) [rectangle, draw] {3}; &
+            \node (n3) [rectangle, draw] {0}; &
+            \node (n4) [rectangle, draw, fill = green!50] {\phantom{0}}; &
+            \node (n5) [rectangle, draw]  {\phantom{0}}; &
+            \node (n6) [rectangle, draw]  {\phantom{0}}; &
+            \node (n7) [rectangle, draw]  {\phantom{0}}; \\
+        };
+        \node (b) at ($ (n0.south west) - (0, 0.75) $) {b};
+        \node (i) at ($ (n3.south west) - (0, 0.75) $) {i};
+        \draw[->] (b) -- ($ (n0.south west) - (0, 0.1) $);
+        \draw[->] (i) -- ($ (n3.south west) - (0, 0.1) $);
+        \draw[ultra thick] (n4.south west) -- (n4.north west);
+    \end{tikzpicture}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw] {2}; &
+            \node (n1) [rectangle, draw] {1}; &
+            \node (n2) [rectangle, draw] {0}; &
+            \node (n3) [rectangle, draw] {3}; &
+            \node (n4) [rectangle, draw, fill = green!50] {\phantom{0}}; &
+            \node (n5) [rectangle, draw]  {\phantom{0}}; &
+            \node (n6) [rectangle, draw]  {\phantom{0}}; &
+            \node (n7) [rectangle, draw]  {\phantom{0}}; \\
+        };
+        \node (b) at ($ (n0.south west) - (0, 0.75) $) {b};
+        \node (p) at ($ (n3.south west) - (0, 0.75) $) {p};
+        \draw[->] (b) -- ($ (n0.south west) - (0, 0.1) $);
+        \draw[->] (p) -- ($ (n3.south west) - (0, 0.1) $);
+        \draw[ultra thick] (n4.south west) -- (n4.north west);
+    \end{tikzpicture}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw] {0}; &
+            \node (n1) [rectangle, draw] {1}; &
+            \node (n2) [rectangle, draw] {2}; &
+            \node (n3) [rectangle, draw] {3}; &
+            \node (n4) [rectangle, draw, fill = green!50] {\phantom{0}}; &
+            \node (n5) [rectangle, draw]  {\phantom{0}}; &
+            \node (n6) [rectangle, draw]  {\phantom{0}}; &
+            \node (n7) [rectangle, draw]  {\phantom{0}}; \\
+        };
+        \node (p) at ($ (n3.south west) - (0, 0.75) $) {p};
+        \draw[->] (p) -- ($ (n3.south west) - (0, 0.1) $);
+        \draw[ultra thick] (n4.south west) -- (n4.north west);
+    \end{tikzpicture}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw] {0}; &
+            \node (n1) [rectangle, draw] {1}; &
+            \node (n2) [rectangle, draw, fill = green!50] {2}; &
+            \node (n3) [rectangle, draw, fill = green!50] {3}; &
+            \node (n4) [rectangle, draw, fill = green!50] {\phantom{0}}; &
+            \node (n5) [rectangle, draw]  {\phantom{0}}; &
+            \node (n6) [rectangle, draw]  {\phantom{0}}; &
+            \node (n7) [rectangle, draw]  {\phantom{0}}; \\
+        };
+        \node (p) at ($ (n3.south west) - (0, 0.75) $) {p};
+        \draw[->] (p) -- ($ (n3.south west) - (0, 0.1) $);
+        \draw[ultra thick] (n4.south west) -- (n4.north west);
+    \end{tikzpicture}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw, fill = green!50] {0}; &
+            \node (n1) [rectangle, draw, fill = green!50] {1}; &
+            \node (n2) [rectangle, draw, fill = green!50] {\phantom{0}}; &
+            \node (n3) [rectangle, draw, fill = green!50] {\phantom{0}}; &
+            \node (n4) [rectangle, draw, fill = green!50] {\phantom{0}}; &
+            \node (n5) [rectangle, draw]  {\phantom{0}}; &
+            \node (n6) [rectangle, draw]  {\phantom{0}}; &
+            \node (n7) [rectangle, draw]  {\phantom{0}}; \\
+        };
+        \draw[ultra thick] (n2.south west) -- (n2.north west);
+        \draw[ultra thick] (n4.south west) -- (n4.north west);
+    \end{tikzpicture}
+    \caption{Left recursion}
+\end{subfigure}
+\vrule
+\begin{subfigure}[t]{0.3\textwidth}
+    \centering
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw]  {\phantom{0}}; &
+            \node (n1) [rectangle, draw]  {\phantom{0}}; &
+            \node (n2) [rectangle, draw]  {\phantom{0}}; &
+            \node (n3) [rectangle, draw]  {\phantom{0}}; &
+            \node (n4) [rectangle, draw, fill = green!50] {\phantom{0}}; &
+            \node (n5) [rectangle, draw] {6}; &
+            \node (n6) [rectangle, draw] {5}; &
+            \node (n7) [rectangle, draw] {7}; \\
+        };
+        \node (i) at ($ (n5.south west) - (0, 0.75) $) {i};
+        \draw[->] (i) -- ($ (n5.south west) - (0, 0.1) $);
+        \draw[ultra thick] (n5.south west) -- (n5.north west);
+    \end{tikzpicture}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw]  {\phantom{0}}; &
+            \node (n1) [rectangle, draw]  {\phantom{0}}; &
+            \node (n2) [rectangle, draw]  {\phantom{0}}; &
+            \node (n3) [rectangle, draw]  {\phantom{0}}; &
+            \node (n4) [rectangle, draw, fill = green!50] {\phantom{0}}; &
+            \node (n5) [rectangle, draw] {6}; &
+            \node (n6) [rectangle, draw] {5}; &
+            \node (n7) [rectangle, draw] {7}; \\
+        };
+        \node (i) at ($ (n5.south west) - (0, 0.75) $) {b/i};
+        \draw[->] (i) -- ($ (n5.south west) - (0, 0.1) $);
+        \draw[ultra thick] (n5.south west) -- (n5.north west);
+    \end{tikzpicture}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw]  {\phantom{0}}; &
+            \node (n1) [rectangle, draw]  {\phantom{0}}; &
+            \node (n2) [rectangle, draw]  {\phantom{0}}; &
+            \node (n3) [rectangle, draw]  {\phantom{0}}; &
+            \node (n4) [rectangle, draw, fill = green!50] {\phantom{0}}; &
+            \node (n5) [rectangle, draw] {6}; &
+            \node (n6) [rectangle, draw] {5}; &
+            \node (n7) [rectangle, draw] {7}; \\
+        };
+        \node (p) at ($ (n7.south west) - (0, 0.75) $) {p};
+        \draw[->] (p) -- ($ (n7.south west) - (0, 0.1) $);
+        \draw[ultra thick] (n5.south west) -- (n5.north west);
+    \end{tikzpicture}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw]  {\phantom{0}}; &
+            \node (n1) [rectangle, draw]  {\phantom{0}}; &
+            \node (n2) [rectangle, draw]  {\phantom{0}}; &
+            \node (n3) [rectangle, draw]  {\phantom{0}}; &
+            \node (n4) [rectangle, draw, fill = green!50] {\phantom{0}}; &
+            \node (n5) [rectangle, draw] {5}; &
+            \node (n6) [rectangle, draw, fill = green!50] {6}; &
+            \node (n7) [rectangle, draw] {7}; \\
+        };
+        \node (p) at ($ (n7.south west) - (0, 0.75) $) {p};
+        \draw[->] (p) -- ($ (n7.south west) - (0, 0.1) $);
+        \draw[ultra thick] (n5.south west) -- (n5.north west);
+    \end{tikzpicture}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw]  {\phantom{0}}; &
+            \node (n1) [rectangle, draw]  {\phantom{0}}; &
+            \node (n2) [rectangle, draw]  {\phantom{0}}; &
+            \node (n3) [rectangle, draw]  {\phantom{0}}; &
+            \node (n4) [rectangle, draw, fill = green!50] {\phantom{0}}; &
+            \node (n5) [rectangle, draw] {5}; &
+            \node (n6) [rectangle, draw, fill = green!50] {6}; &
+            \node (n7) [rectangle, draw] {7}; \\
+        };
+        \node (p) at ($ (n7.south west) - (0, 0.75) $) {p};
+        \draw[->] (p) -- ($ (n7.south west) - (0, 0.1) $);
+        \draw[ultra thick] (n5.south west) -- (n5.north west);
+    \end{tikzpicture}
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw]  {\phantom{0}}; &
+            \node (n1) [rectangle, draw]  {\phantom{0}}; &
+            \node (n2) [rectangle, draw]  {\phantom{0}}; &
+            \node (n3) [rectangle, draw]  {\phantom{0}}; &
+            \node (n4) [rectangle, draw, fill = green!50] {\phantom{0}}; &
+            \node (n5) [rectangle, draw, fill = green!50] {5}; &
+            \node (n6) [rectangle, draw, fill = green!50] {6}; &
+            \node (n7) [rectangle, draw, fill = green!50] {7}; \\
+        };
+        \draw[ultra thick] (n5.south west) -- (n5.north west);
+        \draw[ultra thick] (n6.south west) -- (n6.north west);
+        \draw[ultra thick] (n7.south west) -- (n7.north west);
+    \end{tikzpicture}
+    \caption{Right recursion}
+\end{subfigure}
+\\
+\vspace{1.5\baselineskip}
+\begin{subfigure}[t]{0.3\textwidth}
+    \centering
+    \begin{tikzpicture}[>={Stealth[round]}, text height = 0.75em]
+        \matrix {
+            \node (n0) [rectangle, draw, fill = green!50] {0}; &
+            \node (n1) [rectangle, draw, fill = green!50] {1}; &
+            \node (n2) [rectangle, draw, fill = green!50] {2}; &
+            \node (n3) [rectangle, draw, fill = green!50] {3}; &
+            \node (n4) [rectangle, draw, fill = green!50] {4}; &
+            \node (n5) [rectangle, draw, fill = green!50] {5}; &
+            \node (n6) [rectangle, draw, fill = green!50] {6}; &
+            \node (n7) [rectangle, draw, fill = green!50] {7}; \\
+        };
+    \end{tikzpicture}
+    \caption{Sorted result}
+\end{subfigure}

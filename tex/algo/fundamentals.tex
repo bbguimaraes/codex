@@ -170,6 +170,17 @@ Throughout this chapter, a number of utility functions will be used in the
 implementation of algorithms.  Some will be described as part of each section,
 but a few basic ones are presented here.
 
+\subsubsection{\texttt{less\_than}}
+
+A function which creates a function object (implemented using a lambda
+expression) used in algorithms to order elements based on the less-than operator
+(\texttt{<}).  One subtle aspect of the implementation is a copy of the original
+value is stored, making it suitable as a predicate when the underlying range may
+be changed after the object is created (e.g. in a sorting algorithm).
+
+\lstinputlisting[style=c++,firstline=6,lastline=6]{algo/fundamentals/utils.hpp}
+\vspace{-\baselineskip}
+
 \subsubsection{\texttt{check\_range}}
 
 Verifies that an iterator/sentinel pair represents a valid range.  It is meant
@@ -194,7 +205,15 @@ the types of the inputs:
 These cases can be nicely discriminated using constraints and concepts from the
 standard library.
 
-\lstinputlisting[style=c++,linerange=4-14]{algo/fundamentals/utils.hpp}
+\lstinputlisting[style=c++,linerange=8-18]{algo/fundamentals/utils.hpp}
+\vspace{-\baselineskip}
+
+\subsubsection{\texttt{rand\_it}}
+
+Returns an iterator in the range $[\texttt{b}, \texttt{e})$ chosen randomly
+(using a global \texttt{std::random\_device} object for simplicity).
+
+\lstinputlisting[style=c++,linerange=25-31]{algo/fundamentals/utils.hpp}
 \vspace{-\baselineskip}
 
 \subsubsection{\texttt{contains}}
@@ -202,7 +221,7 @@ standard library.
 Uses \texttt{check\_range} to determine whether an iterator points to a valid
 element of a range.
 
-\lstinputlisting[style=c++,linerange=16-19]{algo/fundamentals/utils.hpp}
+\lstinputlisting[style=c++,linerange=20-23]{algo/fundamentals/utils.hpp}
 \vspace{-\baselineskip}
 
 \subsubsection{\texttt{is\_sorted}}
@@ -219,14 +238,24 @@ that no other element is less than it.  It is conceptually equivalent to
 \texttt{x <= *std::min\_element(b, e)}, but uses the less-than operator and
 stops at the first element for which the assertion does not hold.
 
-\lstinputlisting[style=c++,linerange=21-24]{algo/fundamentals/utils.hpp}
+\lstinputlisting[style=c++,linerange=33-36]{algo/fundamentals/utils.hpp}
 \vspace{-\baselineskip}
 
 \subsubsection{\texttt{min\_element}}
 
 A reimplementation of \texttt{std::min\_element} for illustrative purposes.
 
-\lstinputlisting[style=c++,linerange=26-40]{algo/fundamentals/utils.hpp}
+\lstinputlisting[style=c++,linerange=38-52]{algo/fundamentals/utils.hpp}
+\vspace{-\baselineskip}
+
+\subsubsection{\texttt{sort\_element}}
+
+Positions the element \texttt{i} in the correct position of the range if it were
+sorted.  Similar to \texttt{std::nth\_element}, but based on the element's value
+instead of its current position.  As a side-effect, the range is partitioned
+based on \texttt{less\_than(*i)}.
+
+\lstinputlisting[style=c++,linerange=54-60]{algo/fundamentals/utils.hpp}
 \vspace{-\baselineskip}
 
 \subsubsection{\texttt{lsearch}}

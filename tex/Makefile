@@ -15,6 +15,7 @@ TEX_INPUT := \
 LISTINGS := \
 	algo/bsearch.o \
 	algo/lower_bound.o \
+	algo/sort/quick \
 	algo/sort/selection.o \
 	algo/upper_bound.o \
 	concurrency/queue_atomic.o \

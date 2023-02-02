@@ -7,6 +7,13 @@ interpretation given to their content.  Even so, just as it did for arithmetic
 operations, the binary representation has unique characteristics that can be
 used in the construction of algorithms and data structures.
 
+In general, a collection of bits used in this way is called a \textit{bit set}.
+The value of the set, interpreted as a signed or unsigned integer, is usually
+irrelevant (except when fortuitously exploiting arithmetic hardware to implement
+other operations, as will be shown).  Each bit in the set is said to be either
+\textit{clear} or (sometimes confusingly) \textit{set}, depending on whether its
+value is \texttt{0} or \texttt{1}, respectively.
+
 \subsection{Mixed arithmetic/bitwise expressions}
 
 \label{subsubsec:arch:mixed}
@@ -142,6 +149,496 @@ value.
     \vspace{-2\baselineskip}
 \end{figure}
 
+\subsection{Population count}
+
+\label{subsec:arch:popcnt}
+
+Counting the bits in a set which have the value \texttt{1} --- i.e.  its
+\textit{population count} --- is a useful operation, since such
+\textit{horizontal sum} can be used as the basis for other operations.  In the
+simplest case, this sum is the number of elements present in the
+set\footnotemark.
+
+\footnotetext{
+    Counting the bits which are \emph{not} set is essentially the same problem,
+    and can be implemented based on the population count by either subtracting
+    the result from the set size or by using the complement of the set as an
+    input.
+}
+
+\paragraph{Linear}
+
+A trivial implementation (listing \ref{lst:arch:popcnt_lin}) checks every digit
+in the input and counts those that are set.  The code in the example examines
+the least-significant bit of the input value on each iteration while
+progressively shifting that value to the right.  This is done a number of times
+equal to the number of binary digits in the input type \texttt{T}, so that all
+digits are examined.
+
+\footnotetext{
+    Machine code in these examples shows the instantiation of the template
+    functions for the \ident{std::uint32_t} type.
+}
+
+\begin{figure}[ht]
+    \vspace{-\baselineskip}
+    \begin{subfigure}[t]{0.65\textwidth}
+        \lstinputlisting[
+            style=c++,
+            firstline=15,
+            lastline=22,
+            label={lst:arch:popcnt_lin},
+            caption={Linear \texttt{popcnt}},
+        ]{arch/bit/popcnt.cpp}
+    \end{subfigure}
+    \hspace*{\fill}
+    \begin{subfigure}[t]{0.3\textwidth}
+        \begin{lstlisting}[style=x86]
+00: mov eax, 0x20
+05: xor edx, edx
+07: nop
+10: mov ecx, edi
+12: and ecx, 0x1
+15: add edx, ecx
+17: shr edi, 1
+19: dec eax
+1b: jne 10
+1d: mov eax, edx
+1f: ret
+        \end{lstlisting}
+    \end{subfigure}
+    \vspace{-2\baselineskip}
+\end{figure}
+
+\paragraph{Shift}
+
+Because testing whether a value (either in a register or the result of a
+calculation) is zero is usually a primitive operation, the number of iterations
+in the previous example can be reduced by terminating the loop when that
+condition is detected --- i.e.  when there are no more set bits in the input.
+This ignores higher-order bits in the input which are not set (listing
+\ref{lst:arch:popcnt_shift}) and also removes the need for a separate counter.
+
+\begin{figure}[ht]
+    \vspace{-\baselineskip}
+    \begin{subfigure}[t]{0.65\textwidth}
+        \lstinputlisting[
+            style=c++,
+            firstline=28,
+            lastline=34,
+            label={lst:arch:popcnt_shift},
+            caption={\texttt{popcnt} using bitwise shift},
+        ]{arch/bit/popcnt.cpp}
+    \end{subfigure}
+    \hspace*{\fill}
+    \begin{subfigure}[t]{0.3\textwidth}
+        \begin{lstlisting}[style=x86]
+00: xor  eax, eax
+02: test edi, edi
+04: je   20
+06: nop
+10: mov  edx, edi
+12: and  edx, 0x1
+15: add  eax, edx
+17: shr  edi, 1
+19: jne  10
+1b: ret
+1c: nop
+20: ret
+        \end{lstlisting}
+    \end{subfigure}
+    \vspace{-2\baselineskip}
+\end{figure}
+
+\paragraph{\texttt{blsr}}
+
+Another operation which may be primitive is clearing the least significant bit.
+Even if it is not, it can be implemented easily using other basic operations (v.
+section \secrefpar{subsubsec:arch:mixed}).  Using this operation, the number of
+iterations can be reduced to the number of set bits in the input (listing
+\ref{lst:arch:popcnt_blsr}).  Compared to the more advanced methods below, this
+can be more efficient if the number of set bits is known to be
+small\footnotemark.
+
+\footnotetext{
+    I.e. if the population count is known to be low (or high, since
+    complementing the input and subtracting the result from the total number of
+    bits are simple operations).
+}
+
+\begin{figure}[ht]
+    \vspace{-\baselineskip}
+    \begin{subfigure}[t]{0.65\textwidth}
+        \lstinputlisting[
+            style=c++,
+            firstline=45,
+            lastline=51,
+            label={lst:arch:popcnt_blsr},
+            caption={\texttt{popcnt} using \texttt{blsr}},
+        ]{arch/bit/popcnt.cpp}
+    \end{subfigure}
+    \hspace*{\fill}
+    \begin{subfigure}[t]{0.3\textwidth}
+        \begin{lstlisting}[style=x86]
+00: xor  eax, eax
+02: test edi, edi
+04: je   20
+06: nop
+10: inc  eax
+12: blsr edi, edi
+17: jne  10
+19: ret
+1a: nop
+20: ret
+        \end{lstlisting}
+    \end{subfigure}
+    \vspace{-2\baselineskip}
+\end{figure}
+
+\paragraph{Instruction}
+
+Of course, most processors have a dedicated instruction for this operation, and
+the C++ 20 standard library includes a version which is likely to generate it
+directly when available (listing \ref{lst:arch:popcnt_instr}).
+
+\begin{figure}[ht]
+    \centering
+    \vspace{-\baselineskip}
+    \begin{subfigure}[t]{0.65\textwidth}
+        \lstinputlisting[
+            style=c++,
+            firstline=57,
+            lastline=60,
+            label={lst:arch:popcnt_instr},
+            caption={\texttt{popcnt} instruction},
+        ]{arch/bit/popcnt.cpp}
+    \end{subfigure}
+    \hspace*{\fill}
+    \begin{subfigure}[t]{0.3\textwidth}
+        \begin{lstlisting}[style=x86]
+00: xor    eax, eax
+02: popcnt eax, edi
+06: ret
+        \end{lstlisting}
+    \end{subfigure}
+    \vspace{-2\baselineskip}
+\end{figure}
+
+\paragraph{Table}
+
+Another approach is to precompute the counts for all possible byte values and
+simply consult them at runtime (listing \ref{lst:arch:popcnt_table}).  This
+requires 256 bytes of storage in machines with 8-bit bytes.  Whether it is
+advantageous depends on whether the resulting memory accesses are faster than
+performing the computation.
+
+\begin{figure}[ht]
+    \centering
+    \vspace{-\baselineskip}
+    \begin{subfigure}[t]{0.55\textwidth}
+        \lstinputlisting[
+            style=c++,
+            firstline=66,
+            lastline=83,
+            label={lst:arch:popcnt_table},
+            caption={\texttt{popcnt} using a table},
+        ]{arch/bit/popcnt.cpp}
+    \end{subfigure}
+    \hspace*{\fill}
+    \begin{subfigure}[t]{0.4\textwidth}
+        \begin{lstlisting}[style=x86]
+lea   rcx, [rip+0xd99]
+mov   edx, edi
+movzx eax, dil
+mov   eax, DWORD PTR [rcx+rax*4]
+movzx esi, dh
+mov   esi, esi
+add   eax, DWORD PTR [rcx+rsi*4]
+mov   esi, edi
+shr   esi, 0x10
+movzx esi, sil
+add   eax, DWORD PTR [rcx+rsi*4]
+shr   edx, 0x18
+add   eax, DWORD PTR [rcx+rdx*4]
+ret
+        \end{lstlisting}
+    \end{subfigure}
+    \vspace{-2\baselineskip}
+\end{figure}
+
+\paragraph{Sums}
+
+One interesting method of computing the population count is the following sum,
+where $n$ is the number of bits in $x$:
+\begin{align*}
+    \texttt{popcnt}(x)
+        &= x - \sum_{i=1}^{n-1} \left\lfloor 2^{-i}x \right\rfloor
+        \\[0.5\baselineskip]
+        &= x
+            - \left\lfloor \frac{x}{2}       \right\rfloor
+            - \left\lfloor \frac{x}{4}       \right\rfloor
+            - \left\lfloor \frac{x}{8}       \right\rfloor
+            - \ldots
+            - \left\lfloor \frac{x}{2^{n-1}} \right\rfloor
+\end{align*}
+
+This equality can be demonstrated to be correct by decomposing each term as a
+binary number followed by some elementary algebra\footnotemark.  E.g. for a
+4-bit number, where $b_n$ is the $n\text{th}$ least-significant bit of $x$:
+\begin{align*}
+    \texttt{popcnt}(x)
+        &= x
+            - \left\lfloor \frac{x}{2} \right\rfloor
+            - \left\lfloor \frac{x}{4} \right\rfloor
+            - \left\lfloor \frac{x}{8} \right\rfloor \\
+        &= (2^3b_3+2^2b_2+2^1b_1+2^0b_0)
+            - (2^2b_3+2^1b_2+2^0b_1)
+            - (2^1b_3+2^0b_2)
+            - (2^0b_3) \\
+        &= b_3(2^3-2^2-2^1-2^0) + b_2(2^2-2^1-2^0) + b_1(2^1-2^0) + b_0(2^0) \\
+        &= b_3(1) + b_2(1) + b_1(1) + b_0(1) \\
+        &= b_3 + b_2 + b_1 + b_0
+\end{align*}
+
+\footnotetext{
+    It may also be helpful to think of the divisions by powers of 2 as
+    right-shift operations on a binary number.
+}
+
+It is, however, not very practical from a computational perspective when
+compared to the other methods shown here since it requires $n - 1$ shifts and
+subtractions.  Still, it makes for very simple and compact code (listing
+\ref{lst:arch:popcnt_sum}) and can be partially used in other methods.
+
+\begin{figure}[ht]
+    \vspace{-\baselineskip}
+    \begin{subfigure}[t]{0.65\textwidth}
+        \lstinputlisting[
+            style=c++,
+            firstline=89,
+            lastline=94,
+            label={lst:arch:popcnt_sum},
+            caption={\texttt{popcnt} as a sum},
+        ]{arch/bit/popcnt.cpp}
+    \end{subfigure}
+    \hspace*{\fill}
+    \begin{subfigure}[t]{0.3\textwidth}
+        \begin{lstlisting}[style=x86]
+00: mov edx, edi
+02: shr edx, 1
+04: mov eax, edi
+06: je  16
+08: nop
+10: sub eax, edx
+12: shr edx, 1
+14: jne 10
+16: ret
+        \end{lstlisting}
+    \end{subfigure}
+    \vspace{-\baselineskip}
+\end{figure}
+
+Another interesting sum is the following (listing \ref{lst:arch:popcnt_rot}):
+\begin{align*}
+    \texttt{popcnt}(x)
+        &= -\sum_{i=0}^{n-1} (x ~ \overset{rot}{\texttt{<{}<}} ~ i)
+\end{align*}
+
+Where $n$ is again the number of bits in $x$, the $\overset{rot}{\texttt{<{}<}}$
+operation is a circular left shift (the direction is irrelevant, right shift
+could equally be used), and the summation is done modulo $2^n$.  The final
+negation must be done in two's complement representation.  Demonstrated again
+with a 4-bit number:
+\begin{alignat*}{3}
+    \texttt{popcnt}(x)
+        &= && ~ -(x
+            + x ~ \overset{rot}{\texttt{<{}<}} ~ 1
+            + x ~ \overset{rot}{\texttt{<{}<}} ~ 2
+            + x ~ \overset{rot}{\texttt{<{}<}} ~ 3
+        ) \\
+        &= && ~ -(2^3b_3+2^2b_2+2^1b_1+2^0b_0 \\
+        &  && \quad +2^2b_3+2^1b_2+2^0b_1+2^3b_0 \\
+        &  && \quad +2^1b_3+2^0b_2+2^3b_1+2^2b_0 \\
+        &  && \quad +2^0b_3+2^3b_2+2^2b_1+2^1b_0) \\
+        &= && ~ -(2^3+2^2+2^1+2^0)(b_3+b_2+b_1+b_0) \\
+        &= && ~ -(2^4-1)(b_3+b_2+b_1+b_0) \\
+        &= && ~ -(2^4(b_3+b_2+b_1+b_0) - (b_3+b_2+b_1+b_0)) \\
+        &= && ~ -2^4(b_3+b_2+b_1+b_0) + (b_3+b_2+b_1+b_0) \\
+        &\equiv&&_{\bmod 2^4} ~ b_3+b_2+b_1+b_0
+\end{alignat*}
+
+\begin{figure}[ht]
+    \centering
+    \vspace{-\baselineskip}
+    \begin{subfigure}[t]{0.65\textwidth}
+        \lstinputlisting[
+            style=c++,
+            firstline=100,
+            lastline=107,
+            label={lst:arch:popcnt_rot},
+            caption={\texttt{popcnt} using circular shift},
+        ]{arch/bit/popcnt.cpp}
+    \end{subfigure}
+    \hspace*{\fill}
+    \begin{subfigure}[t]{0.3\textwidth}
+        \begin{lstlisting}[style=x86]
+00: mov  edx, 0x20
+05: xor  eax, eax
+07: nop
+10: add  eax, edi
+12: rorx edi, edi, 0x1f
+18: dec  edx
+1a: jne  00
+1c: neg  eax
+1e: ret
+        \end{lstlisting}
+    \end{subfigure}
+    \vspace{-2\baselineskip}
+\end{figure}
+
+\paragraph{Binary division}
+
+Yet another approach is to use a very common strategy in computing: reducing the
+problem size by half on each iteration.  The count of a 32-bit number is the sum
+of each of its 16-bit halves, which in turn is the sum of each of its halves,
+and so on recursively until groups of single bits are examined.  The count for a
+single bit is obviously the bit itself, establishing the base case of the
+recursive process.  This calculates the population count in a number of steps
+proportional to the binary logarithm of the number of bits.  The diagram below
+shows this process for an 8-bit number.
+
+\begin{center}
+    \begin{tikzpicture}[xscale = 0.5, font = \ttfamily]
+        \node (n00) at ( 0, 3) {0};
+        \node (n01) at ( 2, 3) {0};
+        \node (n02) at ( 4, 3) {0};
+        \node (n03) at ( 6, 3) {1};
+        \node (n04) at ( 8, 3) {1};
+        \node (n05) at (10, 3) {0};
+        \node (n06) at (12, 3) {1};
+        \node (n07) at (14, 3) {1};
+        \node (n10) at ( 1, 2) {00};
+        \node (n11) at ( 5, 2) {01};
+        \node (n12) at ( 9, 2) {01};
+        \node (n13) at (13, 2) {10};
+        \node (n20) at ( 3, 1) {0001};
+        \node (n21) at (11, 1) {0011};
+        \node (n30) at ( 7, 0) {00000100};
+        \draw (n00) -- node [pos = 0.50, anchor = east] {$+$} (n10);
+        \draw (n01) -- node [pos = 0.50, anchor = west] {$+$} (n10);
+        \draw (n02) -- node [pos = 0.50, anchor = east] {$+$} (n11);
+        \draw (n03) -- node [pos = 0.50, anchor = west] {$+$} (n11);
+        \draw (n04) -- node [pos = 0.50, anchor = east] {$+$} (n12);
+        \draw (n05) -- node [pos = 0.50, anchor = west] {$+$} (n12);
+        \draw (n06) -- node [pos = 0.50, anchor = east] {$+$} (n13);
+        \draw (n07) -- node [pos = 0.50, anchor = west] {$+$} (n13);
+        \draw (n10) -- node [pos = 0.25, anchor = north east] {$+$} (n20);
+        \draw (n11) -- node [pos = 0.25, anchor = north west] {$+$} (n20);
+        \draw (n12) -- node [pos = 0.25, anchor = north east] {$+$} (n21);
+        \draw (n13) -- node [pos = 0.25, anchor = north west] {$+$} (n21);
+        \draw (n20) -- node [pos = 0.50, anchor = north east] {$+$} (n30);
+        \draw (n21) -- node [pos = 0.50, anchor = north west] {$+$} (n30);
+    \end{tikzpicture}
+\end{center}
+
+Listing \ref{lst:arch:popcnt_bin} shows a very efficient implementation.  It
+uses a technique known as \textit{SIMD Within A Register} (SWAR), meaning a
+single register is treated as several groups of data and each calculation is
+done for all of those groups in a single instruction.  This implementation is
+very generic and works for types of any width.  Figure \ref{fig:arch:popcnt_bin}
+shows the masks and shift operations involved in each step for an 8-bit number.
+
+\begin{figure}[ht]
+    \vspace{-\baselineskip}
+    \begin{subfigure}[t]{0.7\textwidth}
+        \lstinputlisting[
+            style=c++,
+            firstline=113,
+            lastline=133,
+            label={lst:arch:popcnt_bin},
+            caption={$\log_2$ \texttt{popcnt}},
+        ]{arch/bit/popcnt.cpp}
+    \end{subfigure}
+    \begin{subfigure}[t]{0.275\textwidth}
+        \begin{lstlisting}[style=x86]
+mov   eax, edi
+shr   edi, 1
+and   eax, 0x55555555
+and   edi, 0x55555555
+add   eax, edi
+mov   edx, eax
+shr   edx, 0x2
+and   eax, 0x33333333
+and   edx, 0x33333333
+add   edx, eax
+mov   eax, edx
+shr   eax, 0x4
+and   edx, 0xf0f0f0f
+and   eax, 0xf0f0f0f
+add   eax, edx
+mov   edx, eax
+shr   edx, 0x8
+and   eax, 0xff00ff
+and   edx, 0xff00ff
+add   edx, eax
+movzx eax, dx
+shr   edx, 0x10
+add   eax, edx
+ret
+        \end{lstlisting}
+    \end{subfigure}
+    \vspace{-\baselineskip}
+\end{figure}
+
+\begin{figure}[p]
+    \centering
+    \input{arch/bit/popcnt_bin.tex}
+    \caption{$\log_2$ \texttt{popcnt} for an 8-bit number}
+    \label{fig:arch:popcnt_bin}
+\end{figure}
+
+\paragraph{CSA}
+
+Performing a population count of several integer values can be a simple matter
+of adding the counts of each, but a more efficient method is to use a Carry-Save
+Adder (CSA).  This is a circuit used to implement one-digit binary addition
+(section \secrefpar{subsubsec:arch:add} shows similar circuits).  It takes three
+bits as input (the two values and the previous carry) and has two bits as output
+(the sum and the carry) --- it in effect compresses three bits into two.
+
+\begin{wrapfigure}{r}{0.2\textwidth}
+    \vspace{-2\baselineskip}
+    \begin{lstlisting}[
+        label={lst:arch:csa},
+        caption={CSA},
+    ]
+ 1111 0000 v0
+ 1100 1100 v1
++1010 1010 v2
+ ---------
+ 1110 1000 carry
+ 1001 0110 sum
+    \end{lstlisting}
+\end{wrapfigure}
+
+This can be used to operate on three values at a time --- one accumulator and
+two of the input integers.  The CSA is used to combine bits in the same position
+in each of the three inputs.  These circuits can be connected in many ways, and
+some result in better performance for certain types of inputs.  Listing
+\ref{lst:arch:popcnt_csa} shows a simple implementation.
+
+\begin{figure}[ht]
+    \vspace{-\baselineskip}
+    \lstinputlisting[
+        style=c++,
+        firstline=139,
+        lastline=157,
+        label={lst:arch:popcnt_csa},
+        caption={\texttt{popcnt} using a CSA},
+    ]{arch/bit/popcnt.cpp}
+    \vspace{-\baselineskip}
+\end{figure}
+
 \subsection{Binary mask}
 
 One very useful construct when dealing with binary data is the \textit{binary
@@ -224,7 +721,7 @@ to_mask_u32:
     \end{lstlisting}
 \end{multicols}
 
-\subsubsection{From another bit}
+\subsection{From another bit}
 
 This example (listing \ref{lst:arch:set_bit0}) shows a case where a binary mask
 is advantageous.  It sets the value of a given bit in a byte based on the value

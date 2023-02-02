@@ -1,0 +1,66 @@
+\begin{tikzpicture}[>={Stealth[round]}, font = \ttfamily]
+    \node (n0) [draw] at (0, 0) {0 0 0 1 1 0 1 1};
+    \node (shift0) [right = 1.5 of n0] {0 0 0 0 1 1 0 1};
+    \node (and0_0) [draw, circle, below = 0.5 of n0] {\&};
+    \node (and0_1) [draw, circle, below = 0.5 of shift0] {\&};
+    \node (mask0) [right = 0.45 of and0_0] {0 1 0 1 0 1 0 1};
+    \node (n0_0) [below = 0.5 of and0_0] {00 01 00 01};
+    \node (n0_1) [below = 0.5 of and0_1] {00 00 01 01};
+    \node (p0) [draw, circle, below = 0.5 of n0_0] {$+$};
+    \node (n1) [draw, below = 0.5 of p0] {00 01 01 10};
+    \node (shift1)
+        at ($ (0, 0)!(shift0)!(1, 0) + (0, 0)!(n1)!(0, 1) $)
+        {00 00 01 01};
+    \node (and1_0) [draw, circle, below = 0.5 of n1] {\&};
+    \node (and1_1) [draw, circle, below = 0.5 of shift1] {\&};
+    \node (mask1)
+        at ($ (0, 0)!(mask0)!(1, 0) + (0, 0)!(and1_0)!(0, 1) $)
+        {00 11 00 11};
+    \node (n1_0) [below = 0.5 of and1_0] {0001 0010};
+    \node (n1_1) [below = 0.5 of and1_1] {0000 0001};
+    \node (p1) [draw, circle, below = 0.5 of n1_0] {$+$};
+    \node (n2) [draw, below = 0.5 of p1] {0001 0011};
+    \node (shift2)
+        at ($ (0, 0)!(shift0)!(1, 0) + (0, 0)!(n2)!(0, 1) $)
+        {0000 0001};
+    \node (and2_0) [draw, circle, below = 0.5 of n2)] {\&};
+    \node (and2_1) [draw, circle, below = 0.5 of shift2)] {\&};
+    \node (mask2)
+        at ($ (0, 0)!(mask0)!(1, 0) + (0, 0)!(and2_0)!(0, 1) $)
+        {0000 1111};
+    \node (n2_0) [below = 0.5 of and2_0] {00000011};
+    \node (n2_1) [below = 0.5 of and2_1] {00000001};
+    \node (p2) [draw, circle, below = 0.5 of n2_0] {$+$};
+    \node (s) [draw, below = 0.5 of p2] {00000100};
+    \draw[->] ($ (n0) + (0, 1) $) -- (n0);
+    \draw[->] (n0) -- node [pos = 0.5, anchor = south] {>{}>1} (shift0);
+    \draw (n0) -- (and0_0);
+    \draw (shift0) -- (and0_1);
+    \draw (mask0) -- (and0_0);
+    \draw (mask0) -- (and0_1);
+    \draw[->] (and0_0) -- (n0_0);
+    \draw[->] (and0_1) -- (n0_1);
+    \draw (n0_0) -- (p0);
+    \draw (n0_1) |- (p0);
+    \draw[->] (p0.south) -- +(0, -0.25) -| (n1.north);
+    \draw (n1) -- (and1_0);
+    \draw (shift1) -- (and1_1);
+    \draw (mask1) -- (and1_0);
+    \draw (mask1) -- (and1_1);
+    \draw[->] (and1_0) -- (n1_0);
+    \draw[->] (and1_1) -- (n1_1);
+    \draw[->] (n1) -- node [pos = 0.5, anchor = south] {>{}>2} (shift1);
+    \draw (n1_0) -- (p1);
+    \draw (n1_1) |- (p1);
+    \draw[->] (p1.south) -- +(0, -0.25) -| (n2.north);
+    \draw[->] (n2) -- node [pos = 0.5, anchor = south] {>{}>4} (shift2);
+    \draw (n2) -- (and2_0);
+    \draw (shift2) -- (and2_1);
+    \draw (mask2) -- (and2_0);
+    \draw (mask2) -- (and2_1);
+    \draw[->] (and2_0) -- (n2_0);
+    \draw[->] (and2_1) -- (n2_1);
+    \draw (n2_0) -- (p2);
+    \draw (n2_1) |- (p2);
+    \draw[->] (p2) -- (s);
+\end{tikzpicture}

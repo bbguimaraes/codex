@@ -14,6 +14,7 @@ TEX_INPUT := \
 	codex.bib *.tex */*.tex */*/*.tex */*.c */*/*.c */*/*.cpp
 LISTINGS := \
 	arch/bit/bit \
+	arch/bit/popcnt \
 	algo/bsearch.o \
 	algo/lower_bound.o \
 	algo/sort/quick \
